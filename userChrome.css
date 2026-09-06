@@ -130,8 +130,13 @@ html|body {
 }
 
 /* Backstop so a page with no background of its own doesn't show the desktop. */
+/* .browserContainer is the element that actually paints behind <browser>
+   (content-area.css:242, background: var(--tabpanel-background-color)).
+   #tabbrowser-tabpanels and #appcontent are NOT enough on their own -- with
+   only those cleared, a transparent browser still shows this backdrop. */
 #tabbrowser-tabpanels,
-#appcontent {
+#appcontent,
+.browserContainer {
   background-color: var(--content-backstop) !important;
 }
 
