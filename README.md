@@ -5,6 +5,18 @@ bookmarks bar — genuinely see-through to your desktop, not merely dark.
 
 Written and tested against **Firefox 155 on Linux** (GNOME / Wayland).
 
+![Firefox with a transparent toolbar floating over the desktop](assets/see-through-floating.jpg)
+
+The window's chrome dissolves into whatever is behind it. Above, an unmaximized window —
+the wallpaper runs straight through the toolbar and the page with no seam.
+
+![The New Tab page continuing the desktop](assets/see-through-newtab.jpg)
+
+Both shots are see-through mode over a bare desktop; wallpaper mode looks the same here
+and only differs when another window sits behind Firefox. The vertical tab strip is a
+Firefox setting, not part of this theme — it inherits the transparency like any other
+toolbar.
+
 ## Why this isn't a theme
 
 Themes can't do it. Firefox paints the window background from your theme's `frame`
