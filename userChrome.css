@@ -30,7 +30,9 @@
   --bar-alpha: 0.15;
   /* Tint laid over the desktop, as an "R G B" triplet. */
   --bar-tint: 20 20 26;
-  /* Painted behind pages that declare no background of their own. */
+  /* Painted behind pages that declare no background of their own.
+     transparent = the desktop shows through (needs userContent.css and
+     browser.tabs.allow_transparent_browser). Set a colour to opt out. */
   --content-backstop: #1b1b1f;
 
   /* Derived fills — denser, so clickable things stay findable. */
@@ -132,3 +134,25 @@ html|body {
 #appcontent {
   background-color: var(--content-backstop) !important;
 }
+
+/* --- 7. Live opacity control ---------------------------------------------
+   Firefox reads prefs from CSS via @media -moz-pref(), and pref media queries
+   re-evaluate immediately -- so this adjusts the bar with NO restart.
+
+   In about:config, create an Integer pref named  userchrome.bar.opacity
+   and set it to one of the values below (it's a percentage). If the pref is
+   missing or set to anything else, --bar-alpha keeps its default from
+   block 1. */
+
+@media -moz-pref("userchrome.bar.opacity", 0) { :root { --bar-alpha: 0.00 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 5) { :root { --bar-alpha: 0.05 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 10) { :root { --bar-alpha: 0.10 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 15) { :root { --bar-alpha: 0.15 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 20) { :root { --bar-alpha: 0.20 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 25) { :root { --bar-alpha: 0.25 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 30) { :root { --bar-alpha: 0.30 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 40) { :root { --bar-alpha: 0.40 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 50) { :root { --bar-alpha: 0.50 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 60) { :root { --bar-alpha: 0.60 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 75) { :root { --bar-alpha: 0.75 !important; } }
+@media -moz-pref("userchrome.bar.opacity", 90) { :root { --bar-alpha: 0.90 !important; } }

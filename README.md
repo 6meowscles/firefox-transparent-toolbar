@@ -60,6 +60,44 @@ Everything is driven by three variables at the top of the file:
 
 Restart after editing.
 
+### Adjusting it without restarting
+
+Firefox can read prefs from CSS, and pref media queries re-evaluate immediately, so the
+bar's transparency can be changed live:
+
+1. In `about:config`, create an **Integer** pref named `userchrome.bar.opacity`.
+2. Set it to a percentage — `0`, `5`, `10`, `15`, `20`, `25`, `30`, `40`, `50`, `60`,
+   `75` or `90`.
+
+The bar updates as soon as you change it. No restart, no file editing. Values outside
+that list simply fall through to the `--bar-alpha` default.
+
+## Optional: a see-through page area too
+
+By default the page area stays opaque, so pages that declare no background of their own
+don't go transparent. If you want the desktop to continue behind the whole window —
+useful if your New Tab page shows a copy of your wallpaper that never quite lines up
+with the desktop above it — you need three things:
+
+1. `browser.tabs.allow_transparent_browser` set to `true`.
+2. `--content-backstop: transparent` in `userChrome.css`.
+3. A `userContent.css` beside it, so New Tab stops painting its own copy:
+
+   ```css
+   @-moz-document url("about:newtab"), url("about:home") {
+     :root, body {
+       background-color: transparent !important;
+       background-image: none !important;
+       --newtab-background-color: transparent !important;
+     }
+   }
+   ```
+
+Letting the real desktop through is what makes this align — the page's own copy is
+scaled to the content area (`background-size: cover` on `<body>`), so it can't match the
+desktop behind the toolbar, and shifting it by hand only holds while the window stays
+put.
+
 ## Troubleshooting
 
 **Nothing changed at all.** Confirm the pref is actually set and that you edited the
