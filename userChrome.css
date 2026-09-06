@@ -161,3 +161,52 @@ html|body {
 @media -moz-pref("userchrome.bar.opacity", 60) { :root { --bar-alpha: 0.60 !important; } }
 @media -moz-pref("userchrome.bar.opacity", 75) { :root { --bar-alpha: 0.75 !important; } }
 @media -moz-pref("userchrome.bar.opacity", 90) { :root { --bar-alpha: 0.90 !important; } }
+
+/* --- 8. Pseudo-transparency ----------------------------------------------
+   Instead of being see-through (which shows whatever window happens to be
+   behind, not the desktop), paint the wallpaper as the window's own
+   background, positioned so it lines up with where the window sits on screen.
+
+   This layer is on :root, so it shows through the toolbar AND through the
+   page area -- the browser and .browserContainer are already cleared in
+   block 6, so the content continues the same image with no second offset to
+   keep in sync.
+
+   Trade-off: it is a picture, not a window. Correct only while MAXIMIZED;
+   move or unmaximize and the image stays put while the window doesn't.
+
+   Toggle with userchrome.wallpaper.on in about:config: true paints the
+   wallpaper, false gives genuine see-through. Applies live, no restart.
+
+   Calibrating --wallpaper-offset-y: it's the height of the GNOME top bar.
+   If the image inside the window sits LOWER than the real desktop, increase
+   it; if higher, decrease. One or two pixels at a time. */
+:root {
+  /* Your screen, not your wallpaper file: 1920x1080 @ scale 1.0. The file is
+     3840x2160 and 'zoom' fits it with no crop (both 16:9), so scaling to the
+     screen size reproduces the desktop exactly. */
+  --wallpaper-screen-w: 1920px;
+  --wallpaper-screen-h: 1080px;
+
+  /* Where the window's top-left corner sits on screen, when maximized. */
+  --wallpaper-offset-x: 0px;
+  --wallpaper-offset-y: 32px;
+}
+
+@media -moz-pref("userchrome.wallpaper.on") {
+  :root,
+  html|body {
+    /* WALLPAPER-DATA -- a 1x1 transparent placeholder until you run
+     embed-wallpaper.py, which rewrites the line below.
+       The URL must be literal: via var(--wallpaper) it parses but never
+       paints, which cost three restarts to find. Don't "tidy" it into a
+       custom property. */
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") !important;
+    background-size: var(--wallpaper-screen-w) var(--wallpaper-screen-h) !important;
+    background-position:
+      calc(-1 * var(--wallpaper-offset-x))
+      calc(-1 * var(--wallpaper-offset-y)) !important;
+    background-repeat: no-repeat !important;
+    background-attachment: scroll !important;
+  }
+}

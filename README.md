@@ -98,6 +98,41 @@ scaled to the content area (`background-size: cover` on `<body>`), so it can't m
 desktop behind the toolbar, and shifting it by hand only holds while the window stays
 put.
 
+## Optional: wallpaper mode
+
+True transparency is transparent to whatever is actually behind the window — which is
+usually another window, not your desktop. If you want the wallpaper to show *regardless*
+of what's behind Firefox, this mode paints your wallpaper as the window's own
+background, positioned to line up with where the window sits on screen. Terminal
+emulators call this pseudo-transparency.
+
+Needs [Pillow](https://pypi.org/project/pillow/) (`pip install pillow`).
+
+```sh
+python3 embed-wallpaper.py                 # reads your current GNOME wallpaper
+python3 embed-wallpaper.py ~/pic.jpg       # or point it at any image
+```
+
+Then set `userchrome.wallpaper.on` to `true` in `about:config` and restart Firefox. The
+pref toggles live afterwards — `true` for the wallpaper, `false` for genuine
+see-through.
+
+The script scales and centre-crops the image to your screen the way GNOME's `zoom`
+option does, so the copy matches the real desktop, then embeds it in the stylesheet as a
+`data:` URI. Screen size is detected from `/sys/class/drm`; override with
+`--screen=2560x1440` if that guesses wrong.
+
+**Calibrate the offset once.** `--wallpaper-offset-y` (default `32px`) is the height of
+your desktop panel — how far down the screen the window's top edge sits when maximized.
+If the image inside the window sits lower than the real wallpaper, raise it; if higher,
+lower it. A pixel or two at a time.
+
+**What you're trading.** It's a picture, not a window into the desktop, so it's only
+aligned while Firefox is **maximized** — move or unmaximize it and the image stays put
+while the window doesn't. It won't follow a wallpaper change either; re-run the script.
+You can have "always shows the wallpaper" or "always correct as the window moves", not
+both.
+
 ## Troubleshooting
 
 **Nothing changed at all.** Confirm the pref is actually set and that you edited the
@@ -132,3 +167,10 @@ Firefox 155 renamed several theme variables. Older guides still reference
 `--toolbar-bgcolor` and `--tab-selected-bgcolor`; the current names are
 `--toolbar-background-color` and `--tab-background-color-selected`. If you're adapting an
 older snippet and half of it seems to do nothing, that's usually why.
+
+**The wallpaper doesn't paint, but the rest works.** The `data:` URL has to sit
+literally in `background-image`. Routed through a custom property — `--wallpaper: url(...)`
+then `background-image: var(--wallpaper)` — it parses without error and silently never
+paints. Referencing the image by path doesn't work either: a chrome document won't load
+a `file://` image, and a relative `url()` inside a custom property resolves against the
+document's `chrome://` base URI rather than the stylesheet. Hence embedding.
