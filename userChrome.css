@@ -1,0 +1,134 @@
+/* ==========================================================================
+   Transparent toolbar band  —  Firefox 155, GNOME / Wayland
+   2026-09-06
+
+   Tune --bar-alpha and --bar-tint below; everything else derives from them.
+   Firefox must be FULLY quit (all windows, process gone) and relaunched --
+   chrome CSS is only read at startup.
+
+   Two things this file works around, both verified against this build:
+
+   1. The active theme ("Dark space full transparent") already sets
+      toolbar: rgba(0,0,0,0), but paints an opaque frame: #000000 behind it.
+      That frame is --lwt-accent-color, commented "Known opaque" in
+      browser-shared.css. Clearing it is what actually exposes the desktop.
+
+   2. toolkit/skin/classic/global/toolbar.css paints EVERY <toolbar> with the
+      opaque GTK -moz-headerbar colour, but only under @media -moz-platform:
+      linux. Clearing background alone isn't enough if the widget is still
+      natively themed, hence appearance: none alongside it.
+
+   Variable names match Fx155 internals, which renamed the older
+   --toolbar-bgcolor / --tab-selected-bgcolor that most guides still use.
+   ========================================================================== */
+
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+@namespace html url("http://www.w3.org/1999/xhtml");
+
+:root {
+  /* 0 = fully see-through, 1 = solid. Raise if text is hard to read. */
+  --bar-alpha: 0.15;
+  /* Tint laid over the desktop, as an "R G B" triplet. */
+  --bar-tint: 20 20 26;
+  /* Painted behind pages that declare no background of their own. */
+  --content-backstop: #1b1b1f;
+
+  /* Derived fills — denser, so clickable things stay findable. */
+  --bar-fill-weak: rgb(var(--bar-tint) / calc(var(--bar-alpha) + 0.10));
+  --bar-fill: rgb(var(--bar-tint) / calc(var(--bar-alpha) + 0.22));
+  --bar-fill-solid: rgb(var(--bar-tint) / 0.96);
+  --bar-hairline: rgb(255 255 255 / 0.10);
+}
+
+/* --- 1. Strip the window's own opaque background (see note 1 above) ------ */
+:root {
+  background-color: transparent !important;
+  background-image: none !important;
+  --lwt-accent-color: transparent !important;
+  --lwt-accent-color-inactive: transparent !important;
+  --toolbox-background-color-inactive: transparent !important;
+  --chrome-content-separator-color: transparent !important;
+  --tab-background-color-selected: var(--bar-fill) !important;
+  --tab-background-color-hover: var(--bar-fill-weak) !important;
+}
+
+/* --- 1b. The theme's header image -----------------------------------------
+   browser-shared.css:313 paints the theme_frame image on <body> whenever the
+   image is NOT in the toolbox:
+     :root:not([theme-image-in-toolbox]) body { background-image: ... }
+   The current theme ships a flat #2b2b2b band, which covered the whole bar.
+   Needs the html| prefix -- this file's default namespace is XUL, so a bare
+   "body" would match a XUL element and silently never apply. */
+html|body {
+  background-image: none !important;
+  background-color: transparent !important;
+}
+
+/* --- 2. The band ---------------------------------------------------------
+   One tint on the toolbox; every child fully transparent, so the alphas
+   don't stack up and quietly turn the band opaque again. */
+#navigator-toolbox {
+  background-color: rgb(var(--bar-tint) / var(--bar-alpha)) !important;
+  background-image: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+#titlebar,
+#toolbar-menubar,
+#TabsToolbar,
+#tabbrowser-tabs,
+#nav-bar,
+#PersonalToolbar {
+  appearance: none !important;        /* see note 2 -- must precede background */
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* --- 3. Readability over wallpaper --------------------------------------- */
+#TabsToolbar,
+#nav-bar,
+#PersonalToolbar {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.85) !important;
+}
+
+/* ...but keep typed text crisp; it sits on its own fill already. */
+#urlbar,
+#searchbar {
+  text-shadow: none !important;
+}
+
+/* --- 4. Address bar ------------------------------------------------------
+   Translucent at rest, solid once focused or showing results, so the
+   dropdown never renders over the desktop. */
+#urlbar-background {
+  background-color: var(--bar-fill) !important;
+  border-color: var(--bar-hairline) !important;
+}
+
+#urlbar[focused="true"] > #urlbar-background,
+#urlbar[open] > #urlbar-background {
+  background-color: var(--bar-fill-solid) !important;
+}
+
+/* --- 5. Tabs ------------------------------------------------------------- */
+#tabbrowser-tabs .tabbrowser-tab[selected] .tab-background {
+  background-color: var(--bar-fill) !important;
+  background-image: none !important;
+}
+
+/* --- 6. Collateral -------------------------------------------------------
+   The findbar reuses --lwt-accent-color, which block 1 just emptied, so it
+   needs its own solid background or it goes see-through over the page. */
+.browserContainer > findbar {
+  background-color: var(--bar-fill-solid) !important;
+  background-image: none !important;
+}
+
+/* Backstop so a page with no background of its own doesn't show the desktop. */
+#tabbrowser-tabpanels,
+#appcontent {
+  background-color: var(--content-backstop) !important;
+}
