@@ -60,17 +60,6 @@ Everything is driven by three variables at the top of the file:
 
 Restart after editing.
 
-### Adjusting it without restarting
-
-Firefox can read prefs from CSS, and pref media queries re-evaluate immediately, so the
-bar's transparency can be changed live:
-
-1. In `about:config`, create an **Integer** pref named `userchrome.bar.opacity`.
-2. Set it to a percentage — `0`, `5`, `10`, `15`, `20`, `25`, `30`, `40`, `50`, `60`,
-   `75` or `90`.
-
-The bar updates as soon as you change it. No restart, no file editing. Values outside
-that list simply fall through to the `--bar-alpha` default.
 
 ## Optional: a see-through page area too
 
