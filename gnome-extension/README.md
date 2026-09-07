@@ -40,28 +40,67 @@ wallpaper.
 
 ## Install
 
-GNOME only enumerates extensions at startup, and `ReloadExtension` over D-Bus is now
-a stub that returns "deprecated and does not work" — so on Wayland this needs a
-logout, not a shell restart.
+```sh
+./install.sh
+```
+
+Then **log out and back in**. That last part is not skippable: GNOME enumerates
+extensions only at startup, and `ReloadExtension` over D-Bus is a stub that returns
+"deprecated and does not work", so on Wayland there is no shell restart to use
+instead. On X11 the script tells you to press Alt+F2, `r`, Enter.
+
+The script does the four manual commands and, more usefully, the checks that catch
+the ways this silently does nothing:
+
+- **`userchrome.wallpaper.on` still `true`.** The commonest one by far. The two
+  mechanisms solve the same problem, and the stylesheet's copy is opaque and on
+  top — so the extension loads, works perfectly, and is invisible. It reads
+  exactly like an extension that failed.
+- **`--content-backstop` not `transparent`.** Then the toolbar and sidebar go
+  see-through while the page area stays an opaque slab.
+- **Enabling an extension the shell has never heard of.** `gnome-extensions enable`
+  goes through the running shell, so on a first install it just fails. The script
+  falls back to writing `org.gnome.shell enabled-extensions` directly, which
+  survives the logout.
+- **`disable-user-extensions`** left on globally, which overrides everything else.
+- **A shell version outside `metadata.json`**, which makes the shell refuse to load
+  it with no visible error.
+
+It finds your live Firefox profile through `installs.ini` rather than by directory
+name, so it still checks the right one after a Refresh.
+
+```sh
+./install.sh --link       # symlink instead of copy: edits here go live
+./install.sh --uninstall  # remove it and drop it from enabled-extensions
+```
+
+`--link` means editing this repo updates the installed extension, at the cost of
+breaking it if the repo moves.
+
+### Doing it by hand
 
 ```sh
 UUID=firefox-wallpaper-underlay@localhost
 mkdir -p ~/.local/share/gnome-shell/extensions/$UUID
 cp extension.js metadata.json ~/.local/share/gnome-shell/extensions/$UUID/
+# log out and back in, then:
+gnome-extensions enable $UUID
 ```
-
-Then log out and back in, and:
-
-```sh
-gnome-extensions enable firefox-wallpaper-underlay@localhost
-```
-
-Symlinking the two files instead of copying works too, and means editing this repo
-updates the installed extension — at the cost of breaking it if the repo moves.
 
 Turn the stylesheet's own wallpaper mode **off** (`userchrome.wallpaper.on` →
 `false`) when you use this. They solve the same problem, and the CSS copy would just
 sit on top of the real thing at a slightly wrong offset.
+
+### Why there is no one-click install
+
+The only install path that skips the logout is `InstallRemoteExtension` over D-Bus,
+and it only accepts UUIDs published on [extensions.gnome.org][ego] — the shell
+downloads and loads those itself. Publishing there would make this a single click
+and bring automatic updates, at the cost of a review queue and a UUID that is a
+domain you control rather than `@localhost`. Nothing about the extension would have
+to change apart from that UUID.
+
+[ego]: https://extensions.gnome.org/
 
 ## Tuning
 
