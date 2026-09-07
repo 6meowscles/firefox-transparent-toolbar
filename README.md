@@ -187,6 +187,88 @@ Use one or the other — with the extension running, set `userchrome.wallpaper.o
 to `false`, and make sure `--content-backstop` is `transparent` or the page area stays
 an opaque slab while the toolbar goes see-through.
 
+## Switching between the two modes
+
+Going from wallpaper mode to the extension is not just the pref. The stylesheet
+changed shape when the extension landed, so a profile set up for wallpaper mode has
+two things in it that make the extension look broken: an opaque `--content-backstop`,
+which leaves the page area a slab while the toolbar goes see-through, and the sidebar's
+wallpaper rule still inside the pref gate, which turns the hovered sidebar black.
+
+**You still need `embed-wallpaper.py`.** This is the part that surprises people. The
+extension supplies the wallpaper for the toolbar and the page area, but not for the
+hovered sidebar — when the launcher expands it floats *over* the page, and CSS cannot
+reach the compositor's underlay to fill it. So the sidebar carries a copy in both
+modes, and one `url()` in `userChrome.css` now sits outside the pref gate. Skip the
+embed step and the sidebar falls back to its scrim and goes black on hover.
+
+### Wallpaper mode → the extension
+
+1. **Pull.** Sheets from before the extension landed are missing both fixes above.
+
+   `embed-wallpaper.py` rewrites the tracked sheets in place, so if you have run it
+   the pull will refuse. Throw the embedded copies away first — step 2 regenerates
+   them:
+
+   ```sh
+   cd firefox-transparent-toolbar
+   git checkout -- userChrome.css userContent.css
+   git pull
+   ```
+
+2. **Re-embed.** The pull replaces the repo sheets with the 1×1 placeholders, and the
+   copies in your profile are the old structure — so neither side is reusable as-is.
+
+   ```sh
+   python3 embed-wallpaper.py           # or point it at a file
+   ```
+
+   It writes next to itself in the repo, not into your profile.
+
+3. **Copy both sheets in.** Both, every time — they are generated together and
+   position their copies by the same rule.
+
+   ```sh
+   cp userChrome.css userContent.css /path/to/profile/chrome/
+   ```
+
+4. **Set the prefs** in the profile's `user.js`, not `about:config` — `user.js` is
+   re-applied at every start and would put the old value straight back:
+
+   ```js
+   user_pref("userchrome.wallpaper.on", false);
+   user_pref("browser.tabs.allow_transparent_browser", true);
+   ```
+
+5. **Install the extension.**
+
+   ```sh
+   cd gnome-extension && ./install.sh
+   ```
+
+   Doing 2–4 first means the script's checks come back green and confirm the work,
+   instead of listing what is still missing. If you ever installed the older
+   `@localhost` build, it offers to remove it — a directory whose name no longer
+   matches its `uuid` is a second broken extension, not dead weight.
+
+6. **Log out and back in**, then **fully quit Firefox and start it again**.
+
+7. **Check it is the real underlay.** Unmaximize the window and drag it: the wallpaper
+   should *track* the window. If it stays put you are still looking at the CSS copy,
+   and the pref did not take.
+
+### The extension → wallpaper mode
+
+Set `userchrome.wallpaper.on` back to `true` **and** disable the extension:
+
+```sh
+gnome-extensions disable firefox-wallpaper-underlay@6meowscles.github.io
+```
+
+Both at once is the failure this whole arrangement is easiest to fall into: the
+extension loads, works perfectly, and is completely invisible under the stylesheet's
+opaque copy — which reads exactly like an extension that never loaded.
+
 ## Troubleshooting
 
 **Nothing changed at all.** Confirm the pref is actually set and that you edited the
