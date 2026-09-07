@@ -1,3 +1,23 @@
+/* Firefox Wallpaper Underlay -- a GNOME Shell extension
+ *
+ * Copyright (C) 2026 6meowscles
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 /* Firefox Wallpaper Underlay
  *
  * A transparent window is transparent to whatever is *directly below it in the
@@ -158,11 +178,21 @@ export default class FirefoxWallpaperUnderlayExtension extends Extension {
         for (const id of this._displayIds)
             global.display.disconnect(id);
         this._displayIds = [];
-        global.workspace_manager.disconnect(this._workspaceId);
-        this._workspaceId = 0;
+
+        if (this._workspaceId) {
+            global.workspace_manager.disconnect(this._workspaceId);
+            this._workspaceId = 0;
+        }
 
         for (const window of [...this._watched.keys()])
             this._forget(window);
+
+        /* Nothing may outlive disable(). The shell keeps this object across an
+           enable/disable cycle, so a Map still holding Meta.Window keys would
+           keep those windows -- and their underlays -- alive for as long as
+           the extension is merely disabled. */
+        this._underlays = null;
+        this._watched = null;
     }
 
     /* A window is watched from the moment it appears, but not necessarily

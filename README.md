@@ -301,3 +301,9 @@ then `background-image: var(--wallpaper)` — it parses without error and silent
 paints. Referencing the image by path doesn't work either: a chrome document won't load
 a `file://` image, and a relative `url()` inside a custom property resolves against the
 document's `chrome://` base URI rather than the stylesheet. Hence embedding.
+
+## License
+
+GPL-2.0-or-later — see [LICENSE](LICENSE). The GNOME extension is licensed the same
+way, which is what extensions.gnome.org requires; see
+[gnome-extension/SUBMISSION.md](gnome-extension/SUBMISSION.md).
