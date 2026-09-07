@@ -1,0 +1,7 @@
+{
+  "name": "Firefox Wallpaper Underlay",
+  "description": "Paints the desktop wallpaper directly beneath the Firefox window, so a transparent toolbar shows the wallpaper instead of whatever window happens to be behind. Companion to the firefox-transparent-toolbar userChrome.css.",
+  "uuid": "firefox-wallpaper-underlay@localhost",
+  "shell-version": ["48", "49", "50"],
+  "version": 1
+}
