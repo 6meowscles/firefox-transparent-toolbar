@@ -115,14 +115,31 @@ emulators call this pseudo-transparency.
 
 Needs [Pillow](https://pypi.org/project/pillow/) (`pip install pillow`).
 
+Run **one** of these — the second is the same command pointed at a file of your choice,
+not a second step:
+
 ```sh
-python3 embed-wallpaper.py                 # reads your current GNOME wallpaper
-python3 embed-wallpaper.py ~/pic.jpg       # or point it at any image
+python3 embed-wallpaper.py               # reads your current GNOME wallpaper
+python3 embed-wallpaper.py ~/pic.jpg     # ...or any image you like
 ```
 
-Then set `userchrome.wallpaper.on` to `true` in `about:config` and restart Firefox. The
-pref toggles live afterwards — `true` for the wallpaper, `false` for genuine
-see-through.
+Then copy the sheets into your profile, set `userchrome.wallpaper.on` to `true` in
+`about:config`, and restart Firefox. The pref toggles live afterwards — `true` for the
+wallpaper, `false` for genuine see-through.
+
+**Copy both sheets, every time.** The script rewrites `userChrome.css` and
+`userContent.css` together, and they position their copies by the same rule. Ship one
+without the other and the toolbar and the page area disagree — the image reads as
+offset across the whole window, which looks nothing like the "one file is stale" problem
+it actually is.
+
+```sh
+cp userChrome.css userContent.css /path/to/your/profile/chrome/
+```
+
+Note the script writes the copy next to *itself*, not into your profile. Running it and
+forgetting the `cp` leaves the profile on the previous image, which is the single
+easiest way to lose an evening here.
 
 The script scales and centre-crops the image to your screen the way GNOME's `zoom`
 option does, so the copy matches the real desktop, then embeds it in the stylesheet as a
@@ -165,8 +182,10 @@ to `false`.
 
 **Nothing changed at all.** Confirm the pref is actually set and that you edited the
 profile `about:profiles` says is in use. To prove the sheet is being loaded, add
-`#nav-bar { background-color: #ff00ff !important; }` at the end and restart — a magenta
-address bar row means the file is live and the problem is elsewhere.
+`#nav-bar { background-color: #ff00ff !important; }` on the **first** line and restart —
+a magenta address bar row means the file is live and the problem is elsewhere. Put it
+first, not last: if anything further down the file is malformed, a probe at the end is
+dropped along with it and you learn nothing.
 
 **The bar is still a solid block, and the sheet *is* loading.** Your theme is probably
 painting a `theme_frame` image. Firefox draws it on `<body>` whenever the image isn't in
@@ -188,6 +207,86 @@ a tint instead.
 **One toolbar row stays opaque grey.** On Linux, toolkit's `toolbar.css` paints every
 `<toolbar>` with the GTK `-moz-headerbar` colour. Clearing `background` isn't enough
 while the widget is still natively themed — it needs `appearance: none` too.
+
+**Your edits do nothing, but the sheet was working before.** Chrome CSS is read once,
+at process start, so a Firefox that was already running when you saved the file will
+never see it — and closing the last window doesn't end the process. Compare the two
+timestamps:
+
+```sh
+ps -o lstart= -p $(pgrep -f lib/firefox/firefox | head -1)
+stat -c %y ~/.config/mozilla/firefox/*/chrome/userChrome.css
+```
+
+If the process is older than the file, that's the whole problem. `pkill firefox`, wait
+for `pgrep firefox` to print nothing, then start it again.
+
+**You used "Refresh Firefox" and everything stopped.** A reset creates a *new* profile
+directory and parks the old one in `~/Desktop/Old Firefox Data`. Your `chrome/` folder
+and your prefs stay behind with the old one, so the browser comes back looking untouched
+while every file you edited is intact but unused. The new directory differs from the old
+by eight random characters, so resolve it rather than eyeball it:
+
+```sh
+FF=$HOME/.config/mozilla/firefox
+echo $FF/$(grep -m1 "^Default=" $FF/installs.ini | cut -d= -f2)
+```
+
+Keeping both prefs in `user.js` rather than `about:config` means the next reset costs
+only the file copy — `prefs.js` is wiped, `user.js` is re-applied at every start.
+
+**Wallpaper mode is on but you still get see-through.** Two things to check. The
+stylesheet in your *profile* may still hold the 1×1 placeholder: an un-embedded file is
+about 8 KB, an embedded one over a megabyte, so `ls -l` tells them apart at a glance.
+And the pref has to exist as a real **Boolean** — `@media -moz-pref()` won't match a
+string `"true"`. To prove the media query is matching, add this and restart; a green
+address bar means wallpaper mode is live and the image is the thing to look at:
+
+```css
+@media -moz-pref("userchrome.wallpaper.on") { #nav-bar { background: lime !important; } }
+```
+
+**The toolbar and the page area show different parts of the image.** You copied one
+sheet and not the other. They are generated together and position their copies by the
+same rule; re-copy both and restart.
+
+**Everything in the file stops applying at once.** Something structural is broken. An
+unmatched `{` swallows the rest of the file, and a `/*` that lost its `*/` does the same
+while leaving the braces looking balanced:
+
+```sh
+python3 -c "
+t=open('userChrome.css',encoding='utf-8').read()
+print('braces', t.count('{'), t.count('}'))
+print('comments', t.count('/'+chr(42)), t.count(chr(42)+'/'))
+"
+```
+
+Both pairs must match — 18 and 18, 20 and 20 for the shipped file. This is worth
+checking any time you have hand-edited an embedded sheet: the `data:` URI is a single
+line of roughly a megabyte, and some editors will happily reflow or truncate it.
+
+**Check the whole install in one command.** Prints the profile Firefox actually uses,
+whether both prefs are set, and whether the wallpaper is really embedded:
+
+```sh
+bash -c '
+FF=$HOME/.config/mozilla/firefox
+if [ ! -d "$FF" ]; then FF=$HOME/.mozilla/firefox; fi
+P=$FF/$(grep -m1 "^Default=" "$FF/installs.ini" | cut -d= -f2)
+S=$P/chrome/userChrome.css
+echo "profile in use: $P"
+if [ -f "$S" ]; then
+  stat -c "  userChrome.css: %s bytes, saved %y" "$S"
+  if grep -q "base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ" "$S"; then
+    echo "  PLACEHOLDER - wallpaper not embedded"; else echo "  wallpaper embedded"; fi
+else echo "  MISSING at $S"; fi
+if [ -f "$P/chrome/userContent.css" ]; then echo "  userContent.css: present"
+else echo "  userContent.css: absent (page area stays opaque)"; fi
+grep -h "legacyUserProfileCustomizations" "$P/user.js" "$P/prefs.js" 2>/dev/null
+grep -h "userchrome.wallpaper.on" "$P/user.js" "$P/prefs.js" 2>/dev/null
+'
+```
 
 ## A note on selector names
 
