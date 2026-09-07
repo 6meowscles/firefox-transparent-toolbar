@@ -1,0 +1,40 @@
+/* ==========================================================================
+   See-through page area  —  companion to userChrome.css
+   Firefox 155, GNOME / Wayland
+
+   The image below is written by embed-wallpaper.py, which rewrites it and the
+   size on every run so this file stays in step with userChrome.css.
+
+   Why paint rather than clear: the page area cannot be made see-through on
+   155. about:newtab renders in the privileged about content process and its
+   canvas is painted before any page style applies -- clearing the background
+   on :root, body, #root, .outer-wrapper and main, with and without
+   browser.tabs.allow_transparent_browser, leaves the same opaque slab. A red
+   background set from this very file DOES show, so the sheet is applying; the
+   paint simply isn't the document's to remove.
+
+   So the page continues the wallpaper the way the toolbar does -- as a copy.
+   background-position is `left bottom` rather than a measured offset: the
+   content viewport's bottom edge is the window's bottom edge, so on a
+   maximized window that anchors the copy to the real desktop with no number
+   to calibrate. Verified pixel-for-pixel against the source image.
+
+   No tint here on purpose. --bar-alpha barely reads on the toolbox in
+   practice, so matching it would make the page visibly darker than the band.
+
+   Same trade as wallpaper mode: correct while MAXIMIZED.
+   ========================================================================== */
+
+@-moz-document url("about:newtab"), url("about:home") {
+  :root,
+  body {
+    /* WALLPAPER-DATA -- a 1x1 transparent placeholder until you run
+       embed-wallpaper.py, which rewrites the url() and the size below. */
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") !important;
+    background-size: 1920px 1080px !important;
+    background-position: left bottom !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    background-color: transparent !important;
+  }
+}

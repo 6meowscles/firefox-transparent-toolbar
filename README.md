@@ -75,29 +75,35 @@ Restart after editing.
 
 ## Optional: a see-through page area too
 
-By default the page area stays opaque, so pages that declare no background of their own
-don't go transparent. If you want the desktop to continue behind the whole window —
-useful if your New Tab page shows a copy of your wallpaper that never quite lines up
-with the desktop above it — you need three things:
+By default the page area stays opaque, so the wallpaper stops at the bottom of the
+bookmarks bar and the window looks half-finished. `userContent.css` carries it down the
+rest of the window.
 
-1. `browser.tabs.allow_transparent_browser` set to `true`.
-2. `--content-backstop: transparent` in `userChrome.css`.
-3. A `userContent.css` beside it, so New Tab stops painting its own copy:
+```sh
+cp userContent.css /path/to/your/profile/chrome/
+```
 
-   ```css
-   @-moz-document url("about:newtab"), url("about:home") {
-     :root, body {
-       background-color: transparent !important;
-       background-image: none !important;
-       --newtab-background-color: transparent !important;
-     }
-   }
-   ```
+`embed-wallpaper.py` writes that file at the same time as `userChrome.css` — same image,
+same screen size — so re-copy both after every run. Restart Firefox and the New Tab page
+picks up exactly where the toolbar left off.
 
-Letting the real desktop through is what makes this align — the page's own copy is
-scaled to the content area (`background-size: cover` on `<body>`), so it can't match the
-desktop behind the toolbar, and shifting it by hand only holds while the window stays
-put.
+**It is a copy, not a hole.** The page area can't be made genuinely see-through on
+Firefox 155. `about:newtab` renders in the privileged about content process and its
+canvas is painted before any page style applies: clearing the background on `:root`,
+`body`, `#root`, `.outer-wrapper` and `main`, with and without
+`browser.tabs.allow_transparent_browser`, leaves the same opaque slab. A *red* background
+set from the same file shows up fine, so the sheet is applying — the paint just isn't the
+document's to remove.
+
+So the page paints its own copy, anchored with `background-position: left bottom`. The
+content viewport's bottom edge is the window's bottom edge, so on a maximized window that
+lines the copy up with the real desktop exactly, with no offset to calibrate — verified
+pixel-for-pixel against the source image. Same trade as wallpaper mode: correct while
+maximized.
+
+Pair it with wallpaper mode. In see-through mode the toolbar shows whatever is actually
+behind the window while the page shows the copy, so the two only agree over a bare
+desktop.
 
 ## Optional: wallpaper mode
 
@@ -120,8 +126,14 @@ see-through.
 
 The script scales and centre-crops the image to your screen the way GNOME's `zoom`
 option does, so the copy matches the real desktop, then embeds it in the stylesheet as a
-`data:` URI. Screen size is detected from `/sys/class/drm`; override with
-`--screen=2560x1440` if that guesses wrong.
+`data:` URI.
+
+The size it targets is your screen in **logical** pixels, which is what chrome CSS is
+laid out in — not the panel's physical mode. Those agree only at 100% scaling: a
+2560x1600 panel at 133% is 1920x1200 to the stylesheet, and embedding 2560x1600 there
+paints the wallpaper a third too large. The scale comes from `~/.config/monitors.xml`
+and is divided out automatically; `--scale=1.3333` overrides the detected factor and
+`--screen=1920x1200` overrides the result outright.
 
 **Calibrate the offset once.** `--wallpaper-offset-y` (default `32px`) is the height of
 your desktop panel — how far down the screen the window's top edge sits when maximized.
@@ -133,6 +145,17 @@ aligned while Firefox is **maximized** — move or unmaximize it and the image s
 while the window doesn't. It won't follow a wallpaper change either; re-run the script.
 You can have "always shows the wallpaper" or "always correct as the window moves", not
 both.
+
+## Optional: the GNOME extension instead
+
+Wallpaper mode trades alignment for always showing the wallpaper. `gnome-extension/`
+removes the trade: it inserts the wallpaper into the compositor directly beneath the
+Firefox window, clipped to the window, so the toolbar stays genuinely see-through,
+ignores the windows in between, *and* stays aligned as the window moves. It needs a
+logout to install. See [gnome-extension/README.md](gnome-extension/README.md).
+
+Use one or the other — with the extension running, set `userchrome.wallpaper.on` back
+to `false`.
 
 ## Troubleshooting
 
