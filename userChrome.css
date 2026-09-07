@@ -180,11 +180,23 @@ html|sidebar-main {
    the strip widens OVER the page, and page text showing through tab titles is
    unreadable -- that is why Firefox ships a backdrop here at all.
 
-   This is the see-through-mode fallback: a scrim, so the titles stay legible.
-   In wallpaper mode block 8 replaces it with the wallpaper itself, which is
-   what you actually want -- the sidebar then continues the same image as the
-   toolbar above it and the page beside it, instead of either page text or a
-   slab.
+   So it carries the wallpaper copy, in BOTH modes -- the sidebar then
+   continues the same image as the toolbar above it and the page beside it,
+   instead of either page text or a slab. This used to live in block 8 and
+   only applied in wallpaper mode; with the GNOME extension the rest of the
+   window shows the real underlay, but CSS cannot reach that, so the copy is
+   the only thing that can go here. It lines up while MAXIMIZED and drifts if
+   you move the window -- the one place the extension can't remove that trade.
+
+   Anchored `left bottom`, not `right bottom` like the other two. Those rely
+   on background-attachment: fixed to anchor to the window, and fixed is not
+   honoured on this element: measured, the image sat against the sidebar's own
+   box, 1670px out. So use the edges the sidebar shares with the window
+   instead -- it is flush to the left edge and runs to the bottom.
+
+   The colour in the shorthand's last slot is the fallback: until you run
+   embed-wallpaper.py the url() is a 1x1 transparent placeholder, and without
+   it the titles would sit on bare page text.
 
    :hover rather than Firefox's own [sidebar-launcher-expanded] and
    [sidebar-expand-on-hover]: neither attribute matched in testing, hover does,
@@ -197,7 +209,7 @@ html|sidebar-main {
    and shorthand were all tested and none painted, while an outline in the
    same rule applied throughout. Keep it in step with --bar-tint by hand. */
 html|sidebar-main:hover {
-  background: rgb(20 20 26 / 0.96) !important;
+  background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") left bottom / 1920px 1080px no-repeat scroll rgb(20 20 26 / 0.96) !important;
 }
 
 /* --- 8. Pseudo-transparency ----------------------------------------------
@@ -245,21 +257,4 @@ html|sidebar-main:hover {
     background-attachment: scroll !important;
   }
 
-  /* The expanded sidebar floats over the page, so it cannot simply be
-     see-through -- but it can carry the same copy, and then it continues the
-     image from the toolbar above and the page beside it.
-
-     Anchored `left bottom`, not `right bottom` like the other two. Those rely
-     on background-attachment: fixed to anchor to the window, and fixed is not
-     honoured on this element: measured, the image sat against the sidebar's
-     own box, 1670px out. So use the edges the sidebar shares with the window
-     instead -- it is flush to the left edge and runs to the bottom -- and the
-     copy lands on the real desktop with no dependence on attachment at all.
-
-     One shorthand, with the size written out: on this element var() is
-     dropped and longhands are ignored, so this is the form that paints.
-     embed-wallpaper.py rewrites the url() and the size here too. */
-  html|sidebar-main:hover {
-    background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") left bottom / 1920px 1080px no-repeat scroll transparent !important;
-  }
 }
