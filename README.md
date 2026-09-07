@@ -135,10 +135,14 @@ paints the wallpaper a third too large. The scale comes from `~/.config/monitors
 and is divided out automatically; `--scale=1.3333` overrides the detected factor and
 `--screen=1920x1200` overrides the result outright.
 
-**Calibrate the offset once.** `--wallpaper-offset-y` (default `32px`) is the height of
-your desktop panel — how far down the screen the window's top edge sits when maximized.
-If the image inside the window sits lower than the real wallpaper, raise it; if higher,
-lower it. A pixel or two at a time.
+**Nothing to calibrate.** The copy is anchored to the window's bottom-right corner,
+which on a maximized window *is* the screen's bottom-right corner — whatever the height
+of your panel above it or the width of a sidebar beside it. `userContent.css` anchors the
+same way, so the toolbar and the page agree across the seam. Verified pixel-for-pixel,
+with and without vertical tabs.
+
+If you keep your sidebar on the *right*, swap both sheets to `left bottom`: it's the
+right edge that then stops being the window's.
 
 **What you're trading.** It's a picture, not a window into the desktop, so it's only
 aligned while Firefox is **maximized** — move or unmaximize it and the image stays put

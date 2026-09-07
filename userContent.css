@@ -14,10 +14,17 @@
    paint simply isn't the document's to remove.
 
    So the page continues the wallpaper the way the toolbar does -- as a copy.
-   background-position is `left bottom` rather than a measured offset: the
-   content viewport's bottom edge is the window's bottom edge, so on a
-   maximized window that anchors the copy to the real desktop with no number
-   to calibrate. Verified pixel-for-pixel against the source image.
+   background-position is `right bottom` rather than a measured offset: both
+   of those edges of the content viewport ARE the window's edges, so on a
+   maximized window they anchor the copy to the real desktop with no number to
+   calibrate. Verified pixel-for-pixel against the source image.
+
+   Right rather than left because a sidebar -- vertical tabs, bookmarks, any
+   of them -- is chrome, and sits outside the content viewport. It insets the
+   viewport's LEFT edge while leaving the right edge on the window frame, so
+   anchoring left slid the whole page sideways by the sidebar's width (254px
+   here, measured). The right edge moves only if you put the sidebar on the
+   right, in which case swap this back to `left bottom`.
 
    No tint here on purpose. --bar-alpha barely reads on the toolbox in
    practice, so matching it would make the page visibly darker than the band.
@@ -32,7 +39,7 @@
        embed-wallpaper.py, which rewrites the url() and the size below. */
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") !important;
     background-size: 1920px 1080px !important;
-    background-position: left bottom !important;
+    background-position: right bottom !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
     background-color: transparent !important;

@@ -157,9 +157,11 @@ html|body {
    Toggle with userchrome.wallpaper.on in about:config: true paints the
    wallpaper, false gives genuine see-through. Applies live, no restart.
 
-   Calibrating --wallpaper-offset-y: it's the height of the GNOME top bar.
-   If the image inside the window sits LOWER than the real desktop, increase
-   it; if higher, decrease. One or two pixels at a time. */
+   Anchored bottom-right, not by a measured top offset: those two edges of a
+   maximized window ARE the screen's edges, whatever the height of the panel
+   above it or the width of a sidebar beside it, so the copy lands on the real
+   desktop with nothing to calibrate. userContent.css anchors the same way, so
+   the toolbar and the page agree across the seam. */
 :root {
   /* Your screen, not your wallpaper file: 1920x1080 @ scale 1.0. The file is
      3840x2160 and 'zoom' fits it with no crop (both 16:9), so scaling to the
@@ -167,9 +169,6 @@ html|body {
   --wallpaper-screen-w: 1920px;
   --wallpaper-screen-h: 1080px;
 
-  /* Where the window's top-left corner sits on screen, when maximized. */
-  --wallpaper-offset-x: 0px;
-  --wallpaper-offset-y: 32px;
 }
 
 @media -moz-pref("userchrome.wallpaper.on") {
@@ -182,9 +181,7 @@ html|body {
        custom property. */
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") !important;
     background-size: var(--wallpaper-screen-w) var(--wallpaper-screen-h) !important;
-    background-position:
-      calc(-1 * var(--wallpaper-offset-x))
-      calc(-1 * var(--wallpaper-offset-y)) !important;
+    background-position: right bottom !important;
     background-repeat: no-repeat !important;
     background-attachment: scroll !important;
   }
