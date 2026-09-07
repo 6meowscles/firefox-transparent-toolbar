@@ -92,7 +92,8 @@ html|body {
 /* --- 3. Readability over wallpaper --------------------------------------- */
 #TabsToolbar,
 #nav-bar,
-#PersonalToolbar {
+#PersonalToolbar,
+#sidebar-container {
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.85) !important;
 }
 
@@ -140,6 +141,33 @@ html|body {
   background-color: var(--content-backstop) !important;
 }
 
+
+/* --- 7b. Sidebar ---------------------------------------------------------
+   The sidebar is chrome, so the window's wallpaper layer is already behind
+   it -- but sidebar.css paints over that in three places, and the one that
+   bites is the hover expansion. Firefox deliberately puts an opaque backdrop
+   under the expanded launcher, because there it floats over the page:
+
+     :root[sidebar-expand-on-hover] #sidebar-container[sidebar-launcher-expanded] {
+       background-image: image(var(--toolbox-background-color));
+       background-color: light-dark(#e8e8e8, #202020);   <- "guarantee opacity"
+     }
+
+   with a second rule swapping in --toolbox-background-color under [lwtheme],
+   and a third painting --sidebar-background-color when sidebar.revamp is off.
+   Clearing background on the container defeats all three, so the strip keeps
+   the wallpaper whether it is collapsed or expanded.
+
+   Note the html| prefix: sidebar-main is an HTML element and this file's
+   default namespace is XUL, so a bare selector would never match it. */
+#sidebar-container,
+#sidebar-box,
+html|sidebar-main {
+  appearance: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  --sidebar-background-color: transparent !important;
+}
 
 /* --- 8. Pseudo-transparency ----------------------------------------------
    Instead of being see-through (which shows whatever window happens to be
