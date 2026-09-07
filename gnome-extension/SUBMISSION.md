@@ -31,22 +31,25 @@ except the parts that need your account.
 ## Build the bundle
 
 ```sh
-cd ..                      # the repo root, so LICENSE resolves
-gnome-extensions pack gnome-extension --force \
-    --extra-source="$PWD/LICENSE" \
-    --out-dir=/tmp
+./pack.sh              # from this directory; OUT_DIR is the first argument, default /tmp
 ```
 
-That writes `/tmp/firefox-wallpaper-underlay@6meowscles.github.io.shell-extension.zip`
-containing exactly `metadata.json`, `extension.js` and `LICENSE`. `pack` only picks up
-files it recognises, so `install.sh` and the READMEs are left out on their own —
-which is what you want, since reviewers read the repo for context and the bundle for
-code.
+It resolves its own location, so it runs from anywhere, and prints the bundle contents
+when it finishes. That last part is not decoration: `gnome-extensions pack` resolves
+`SOURCE_DIRECTORY` against the *current* directory, and being one directory off fails
+with `Missing extension.js in extension pack` — which reads like the file is gone
+rather than like you are standing in the wrong place.
 
-Check it before uploading:
+The bundle is exactly `metadata.json`, `extension.js` and `LICENSE`. `pack` only picks
+up the files it recognises, so `install.sh`, `pack.sh` and the READMEs stay out on
+their own — which is what you want: reviewers read the repo for context and the bundle
+for code.
+
+By hand, if you would rather, from the **repo root** and nowhere else:
 
 ```sh
-unzip -l /tmp/firefox-wallpaper-underlay@6meowscles.github.io.shell-extension.zip
+gnome-extensions pack gnome-extension --force \
+    --extra-source="$PWD/LICENSE" --out-dir=/tmp
 ```
 
 ## Upload
