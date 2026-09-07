@@ -172,11 +172,20 @@ both.
 Wallpaper mode trades alignment for always showing the wallpaper. `gnome-extension/`
 removes the trade: it inserts the wallpaper into the compositor directly beneath the
 Firefox window, clipped to the window, so the toolbar stays genuinely see-through,
-ignores the windows in between, *and* stays aligned as the window moves. It needs a
-logout to install. See [gnome-extension/README.md](gnome-extension/README.md).
+ignores the windows in between, *and* stays aligned as the window moves.
+
+```sh
+cd gnome-extension && ./install.sh
+```
+
+Then log out and back in — GNOME only enumerates extensions at startup, and there is
+no way around that on Wayland. The script also checks the two settings below, which
+are the ways this silently does nothing. Full steps, before and after, in
+[gnome-extension/README.md](gnome-extension/README.md).
 
 Use one or the other — with the extension running, set `userchrome.wallpaper.on` back
-to `false`.
+to `false`, and make sure `--content-backstop` is `transparent` or the page area stays
+an opaque slab while the toolbar goes see-through.
 
 ## Troubleshooting
 

@@ -40,34 +40,105 @@ wallpaper.
 
 ## Install
 
+### Before you run it
+
+1. **Install the stylesheet first, and confirm it works.** This extension changes what
+   is *behind* the Firefox window; it does not make Firefox transparent — that is
+   `userChrome.css`'s job. Follow [the main README](../README.md#install) and check
+   the toolbar is already see-through. Adding the extension to an opaque Firefox looks
+   exactly like an extension that failed to load.
+
+2. **Turn the stylesheet's wallpaper mode off.** In your profile's `user.js`:
+
+   ```js
+   user_pref("userchrome.wallpaper.on", false);
+   ```
+
+   In `user.js`, not `about:config` — `user.js` is re-applied at every start, so it
+   would put the old value straight back. The two mechanisms solve the same problem,
+   and the stylesheet's copy is opaque and sits on top, so leaving this `true` hides
+   the extension completely while it runs perfectly.
+
+3. **Check `--content-backstop` is `transparent`** near the top of `userChrome.css`.
+   A colour there makes the page area an opaque slab while the toolbar and sidebar go
+   see-through.
+
+4. **Check your shell.** `gnome-shell --version` should be 48, 49 or 50.
+
+5. **Get the files.**
+
+   ```sh
+   git clone https://github.com/6meowscles/firefox-transparent-toolbar
+   cd firefox-transparent-toolbar/gnome-extension
+   ```
+
+Steps 1–4 are all checked by the script, so you can equally just run it and read what
+it tells you.
+
+### Run it
+
 ```sh
 ./install.sh
 ```
 
-Then **log out and back in**. That last part is not skippable: GNOME enumerates
-extensions only at startup, and `ReloadExtension` over D-Bus is a stub that returns
-"deprecated and does not work", so on Wayland there is no shell restart to use
-instead. On X11 the script tells you to press Alt+F2, `r`, Enter.
+If it is not executable, `chmod +x install.sh` or run `bash install.sh`.
 
-The script does the four manual commands and, more usefully, the checks that catch
-the ways this silently does nothing:
+It copies the extension in, enables it, cleans up an install left under an older
+UUID, and reports on the Firefox side. Nothing it does needs root.
 
-- **`userchrome.wallpaper.on` still `true`.** The commonest one by far. The two
-  mechanisms solve the same problem, and the stylesheet's copy is opaque and on
-  top — so the extension loads, works perfectly, and is invisible. It reads
-  exactly like an extension that failed.
-- **`--content-backstop` not `transparent`.** Then the toolbar and sidebar go
-  see-through while the page area stays an opaque slab.
+### After you run it
+
+1. **Log out and back in.** Not optional on Wayland: GNOME enumerates extensions only
+   at startup, and `ReloadExtension` over D-Bus is a stub that returns "deprecated and
+   does not work". On X11 you can press Alt+F2, type `r`, Enter instead.
+
+2. **Check the extension loaded.**
+
+   ```sh
+   gnome-extensions info firefox-wallpaper-underlay@6meowscles.github.io
+   ```
+
+   `State: ACTIVE` means it is running. `INITIALIZED` or `INACTIVE` means it is
+   installed but not enabled; `ERROR` means it threw, and
+
+   ```sh
+   journalctl --user -b -o cat | grep wallpaper-underlay
+   ```
+
+   will say why.
+
+3. **Fully quit Firefox and start it again** — all windows, process gone. Chrome CSS
+   is only read at startup, so if you changed `user.js` or `userChrome.css` in the
+   steps above, this is when it takes effect.
+
+4. **Confirm it is the real underlay and not a painted copy.** Unmaximize the window
+   and drag it around. The wallpaper behind the toolbar should *track the window* and
+   stay lined up with the desktop. If the image stays put while the window moves, you
+   are looking at the stylesheet's copy and wallpaper mode is still on.
+
+### What the script checks
+
+The install commands were never really the hard part. These are, because each one
+fails silently:
+
+- **`userchrome.wallpaper.on` still `true`** — the commonest by far. The extension
+  loads, works, and is invisible under the stylesheet's opaque copy.
+- **`--content-backstop` not `transparent`** — page area stays a slab.
 - **Enabling an extension the shell has never heard of.** `gnome-extensions enable`
   goes through the running shell, so on a first install it just fails. The script
-  falls back to writing `org.gnome.shell enabled-extensions` directly, which
-  survives the logout.
+  falls back to writing `org.gnome.shell enabled-extensions` directly, which survives
+  the logout.
 - **`disable-user-extensions`** left on globally, which overrides everything else.
-- **A shell version outside `metadata.json`**, which makes the shell refuse to load
-  it with no visible error.
+- **A shell version outside `metadata.json`**, which makes the shell refuse to load it
+  with no visible error.
+- **An install under an older UUID.** GNOME requires the directory name to equal
+  `metadata.json`'s `uuid`, so a leftover directory is a second, permanently broken
+  extension rather than dead weight.
 
-It finds your live Firefox profile through `installs.ini` rather than by directory
-name, so it still checks the right one after a Refresh.
+It resolves your Firefox profile through `installs.ini` rather than by directory name,
+so it still checks the right one after a Refresh.
+
+### Options
 
 ```sh
 ./install.sh --link       # symlink instead of copy: edits here go live
@@ -80,25 +151,22 @@ breaking it if the repo moves.
 ### Doing it by hand
 
 ```sh
-UUID=firefox-wallpaper-underlay@localhost
+UUID=firefox-wallpaper-underlay@6meowscles.github.io
 mkdir -p ~/.local/share/gnome-shell/extensions/$UUID
 cp extension.js metadata.json ~/.local/share/gnome-shell/extensions/$UUID/
 # log out and back in, then:
 gnome-extensions enable $UUID
 ```
 
-Turn the stylesheet's own wallpaper mode **off** (`userchrome.wallpaper.on` →
-`false`) when you use this. They solve the same problem, and the CSS copy would just
-sit on top of the real thing at a slightly wrong offset.
+The directory name must match `uuid` in `metadata.json` exactly, or the shell skips it.
 
 ### Why there is no one-click install
 
 The only install path that skips the logout is `InstallRemoteExtension` over D-Bus,
 and it only accepts UUIDs published on [extensions.gnome.org][ego] — the shell
-downloads and loads those itself. Publishing there would make this a single click
-and bring automatic updates, at the cost of a review queue and a UUID that is a
-domain you control rather than `@localhost`. Nothing about the extension would have
-to change apart from that UUID.
+downloads and loads those itself. Publishing would make this a single click and bring
+automatic updates, at the cost of a review queue. See [SUBMISSION.md](SUBMISSION.md);
+the prep is done.
 
 [ego]: https://extensions.gnome.org/
 

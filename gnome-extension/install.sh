@@ -28,6 +28,26 @@ bad()  { printf '  %s✗%s %s\n' "$red"    "$off" "$*"; }
 step() { printf '\n%s%s%s\n' "$bold" "$*" "$off"; }
 die()  { bad "$*"; exit 1; }
 
+# enabled-extensions is a GVariant array. Editing it with sed is how you end up
+# with a malformed key that the shell silently ignores, so parse and re-emit it.
+list_edit() {  # list_edit add|remove UUID
+    python3 - "$1" "$2" <<'PY'
+import subprocess, sys
+op, uuid = sys.argv[1], sys.argv[2]
+cur = subprocess.run(["gsettings", "get", "org.gnome.shell", "enabled-extensions"],
+                     capture_output=True, text=True).stdout.strip()
+items = [i.strip().strip("'") for i in cur.strip("[]").split(",") if i.strip()]
+if op == "add" and uuid not in items:
+    items.append(uuid)
+elif op == "remove" and uuid in items:
+    items.remove(uuid)
+else:
+    sys.exit(0)
+subprocess.run(["gsettings", "set", "org.gnome.shell", "enabled-extensions",
+                "[" + ", ".join(f"'{i}'" for i in items) + "]"], check=True)
+PY
+}
+
 link=0
 uninstall=0
 for arg in "$@"; do
@@ -42,26 +62,15 @@ done
 command -v python3 >/dev/null || die "python3 is needed to read metadata.json."
 uuid=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["uuid"])' \
        "$here/metadata.json")
-dest="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$uuid"
+extdir="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions"
+dest="$extdir/$uuid"
 
 
 # --- uninstall ------------------------------------------------------------
 if [ "$uninstall" = 1 ]; then
     step "Removing $uuid"
     gnome-extensions disable "$uuid" 2>/dev/null || true
-    # Drop it from the list too, or the shell re-enables it after the logout.
-    python3 - "$uuid" <<'PY'
-import subprocess, sys
-uuid = sys.argv[1]
-cur = subprocess.run(["gsettings", "get", "org.gnome.shell", "enabled-extensions"],
-                     capture_output=True, text=True).stdout.strip()
-items = [i.strip().strip("'") for i in cur.strip("[]").split(",") if i.strip()]
-if uuid in items:
-    items.remove(uuid)
-    subprocess.run(["gsettings", "set", "org.gnome.shell", "enabled-extensions",
-                    "[" + ", ".join(f"'{i}'" for i in items) + "]"], check=True)
-    print("  removed from enabled-extensions")
-PY
+    list_edit remove "$uuid"        # or the shell re-enables it after the logout
     rm -rf -- "$dest"
     ok "Deleted $dest"
     printf '\nLog out and back in to unload it from the running shell.\n'
@@ -116,6 +125,63 @@ else
 fi
 
 
+# --- a copy under an older UUID -------------------------------------------
+# GNOME keys everything off the directory name matching metadata.json's uuid,
+# so a directory left behind from a previous uuid is not harmless -- it is a
+# second, permanently broken extension that the shell reports at every login.
+# The uuid changed once already, when this was prepared for
+# extensions.gnome.org (@localhost is not a domain anyone controls).
+step "Checking for an older install"
+
+stale=()
+if [ -d "$extdir" ]; then
+    for d in "$extdir"/*/; do
+        d=${d%/}
+        [ "$d" = "$dest" ] && continue
+        [ -f "$d/metadata.json" ] || continue
+        if python3 - "$d/metadata.json" "$here/metadata.json" <<'PY'
+import json, sys
+try:
+    a, b = (json.load(open(q)) for q in sys.argv[1:3])
+except Exception:
+    sys.exit(1)
+sys.exit(0 if a.get("name") == b.get("name") else 1)
+PY
+        then
+            stale+=("$d")
+        fi
+    done
+fi
+
+if [ "${#stale[@]}" -eq 0 ]; then
+    ok "No older install to clean up"
+else
+    for d in "${stale[@]}"; do
+        warn "Also installed under a different uuid: $(basename -- "$d")"
+    done
+    reply=n
+    if [ -t 0 ]; then
+        printf '  Remove it? [y/N] '
+        read -r reply || reply=n
+    fi
+    case $reply in
+        y|Y)
+            for d in "${stale[@]}"; do
+                old=$(basename -- "$d")
+                gnome-extensions disable "$old" 2>/dev/null || true
+                list_edit remove "$old"
+                rm -rf -- "$d"
+                ok "Removed $old"
+            done ;;
+        *)
+            warn "Left in place. Remove with:"
+            for d in "${stale[@]}"; do
+                printf '    %srm -rf %s%s\n' "$dim" "$d" "$off"
+            done ;;
+    esac
+fi
+
+
 # --- enable ---------------------------------------------------------------
 step "Enabling"
 
@@ -126,17 +192,7 @@ step "Enabling"
 if gnome-extensions enable "$uuid" 2>/dev/null; then
     ok "Enabled in the running shell"
 else
-    python3 - "$uuid" <<'PY'
-import subprocess, sys
-uuid = sys.argv[1]
-cur = subprocess.run(["gsettings", "get", "org.gnome.shell", "enabled-extensions"],
-                     capture_output=True, text=True).stdout.strip()
-items = [i.strip().strip("'") for i in cur.strip("[]").split(",") if i.strip()]
-if uuid not in items:
-    items.append(uuid)
-    subprocess.run(["gsettings", "set", "org.gnome.shell", "enabled-extensions",
-                    "[" + ", ".join(f"'{i}'" for i in items) + "]"], check=True)
-PY
+    list_edit add "$uuid"
     ok "Added to enabled-extensions; it will come up enabled after the logout"
 fi
 
@@ -253,4 +309,5 @@ esac
 
 printf '\n  Then check it took:\n'
 printf '    %sgnome-extensions info %s%s\n' "$dim" "$uuid" "$off"
-printf '  State: ACTIVE means it is running.\n\n'
+printf '  State: ACTIVE means it is running.\n'
+printf '\n  Then fully quit Firefox and start it again, so it re-reads userChrome.css.\n\n'
