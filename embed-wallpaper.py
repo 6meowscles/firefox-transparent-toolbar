@@ -141,16 +141,20 @@ def main() -> None:
     b64 = base64.b64encode(buf.getvalue()).decode()
 
     css = SHEET.read_text()
-    css, n = re.subn(r'background-image: url\("data:image/[a-z]+;base64,[A-Za-z0-9+/=]*"\)',
-                     f'background-image: url("data:image/jpeg;base64,{b64}")',
-                     css, count=1)
+    # Two of them now: the window's own layer, and the sidebar's copy.
+    css, n = re.subn(r'url\("data:image/[a-z]+;base64,[A-Za-z0-9+/=]*"\)',
+                     f'url("data:image/jpeg;base64,{b64}")', css)
     if not n:
-        sys.exit("No wallpaper background-image declaration found in userChrome.css")
+        sys.exit("No wallpaper url() found in userChrome.css")
     css = re.sub(r"--wallpaper-screen-w: \d+px;", f"--wallpaper-screen-w: {size[0]}px;", css)
     css = re.sub(r"--wallpaper-screen-h: \d+px;", f"--wallpaper-screen-h: {size[1]}px;", css)
+    # The sidebar rule can't use those variables, so its size is literal.
+    css = re.sub(r"/ \d+px \d+px no-repeat scroll",
+                 f"/ {size[0]}px {size[1]}px no-repeat scroll", css)
     SHEET.write_text(css)
 
-    print(f"Embedded {src} at {size[0]}x{size[1]} ({len(b64) / 1024:.0f} KB base64).")
+    print(f"Embedded {src} at {size[0]}x{size[1]} "
+          f"({len(b64) / 1024:.0f} KB base64, {n} place{'s' if n > 1 else ''}).")
     if update_content_sheet(b64, size):
         print(f"Updated {CONTENT_SHEET.name} to match "
               "(copy it beside userChrome.css for a see-through page area).")

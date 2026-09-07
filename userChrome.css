@@ -169,27 +169,26 @@ html|sidebar-main {
   --sidebar-background-color: transparent !important;
 }
 
-/* ...but give it back while the pointer is on it. With expand-on-hover the
-   strip widens OVER the page, and page text showing through tab titles is
-   unreadable -- that is why Firefox ships a backdrop here at all. This brings
-   one back for the hover only, so the sidebar is see-through the whole time
-   you are not pointing at it, which is when you are looking at the wallpaper
-   anyway.
+/* ...but give it something while the pointer is on it. With expand-on-hover
+   the strip widens OVER the page, and page text showing through tab titles is
+   unreadable -- that is why Firefox ships a backdrop here at all.
+
+   This is the see-through-mode fallback: a scrim, so the titles stay legible.
+   In wallpaper mode block 8 replaces it with the wallpaper itself, which is
+   what you actually want -- the sidebar then continues the same image as the
+   toolbar above it and the page beside it, instead of either page text or a
+   slab.
 
    :hover rather than Firefox's own [sidebar-launcher-expanded] and
    [sidebar-expand-on-hover]: neither attribute matched in testing, hover does,
    and here they mean the same thing. It has to sit on sidebar-main -- that is
    the element that actually paints, verified by colouring each candidate in
-   turn. Drop the 0.96 below if you would rather see more wallpaper and read
-   less.
+   turn.
 
-   The colour is written out rather than built from --bar-tint, which is the
-   one thing in this file that is not tunable. Any var() inside the colour is
-   dropped on this element -- var(--bar-fill-solid), rgb(var(--bar-tint)/.96)
-   and both longhand and shorthand were all tested and none painted, while a
-   literal rgb() in the same rule does, and an outline in that rule applied
-   throughout. So the rule matches; the substitution is what fails. Keep this
-   in step with --bar-tint by hand if you change it. */
+   The colour is a literal, and stays one. Any var() inside it is dropped on
+   this element -- var(--bar-fill-solid), rgb(var(--bar-tint)/.96), longhand
+   and shorthand were all tested and none painted, while an outline in the
+   same rule applied throughout. Keep it in step with --bar-tint by hand. */
 html|sidebar-main:hover {
   background: rgb(20 20 26 / 0.96) !important;
 }
@@ -237,5 +236,23 @@ html|sidebar-main:hover {
     background-position: right bottom !important;
     background-repeat: no-repeat !important;
     background-attachment: scroll !important;
+  }
+
+  /* The expanded sidebar floats over the page, so it cannot simply be
+     see-through -- but it can carry the same copy, and then it continues the
+     image from the toolbar above and the page beside it.
+
+     Anchored `left bottom`, not `right bottom` like the other two. Those rely
+     on background-attachment: fixed to anchor to the window, and fixed is not
+     honoured on this element: measured, the image sat against the sidebar's
+     own box, 1670px out. So use the edges the sidebar shares with the window
+     instead -- it is flush to the left edge and runs to the bottom -- and the
+     copy lands on the real desktop with no dependence on attachment at all.
+
+     One shorthand, with the size written out: on this element var() is
+     dropped and longhands are ignored, so this is the form that paints.
+     embed-wallpaper.py rewrites the url() and the size here too. */
+  html|sidebar-main:hover {
+    background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") left bottom / 1920px 1080px no-repeat scroll transparent !important;
   }
 }
