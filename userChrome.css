@@ -32,8 +32,15 @@
   --bar-tint: 20 20 26;
   /* Painted behind pages that declare no background of their own.
      transparent = the desktop shows through (needs userContent.css and
-     browser.tabs.allow_transparent_browser). Set a colour to opt out. */
-  --content-backstop: #1b1b1f;
+     browser.tabs.allow_transparent_browser). Set a colour to opt out.
+
+     This is the ONLY thing between a page with no background and whatever is
+     under the window, chrome included -- block 6 paints it on
+     .browserContainer, which sits above the window's alpha but below
+     <browser>. A colour here makes the page area opaque no matter what else
+     is transparent, which is why the toolbar and sidebar can show the
+     GNOME extension's wallpaper underlay while the page stays a slab. */
+  --content-backstop: transparent;
 
   /* Derived fills — denser, so clickable things stay findable. */
   --bar-fill-weak: rgb(var(--bar-tint) / calc(var(--bar-alpha) + 0.10));
