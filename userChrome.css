@@ -198,6 +198,19 @@ html|sidebar-main {
    embed-wallpaper.py the url() is a 1x1 transparent placeholder, and without
    it the titles would sit on bare page text.
 
+   Gated on [sizemode="maximized"], and only here. A copy is anchored to the
+   WINDOW; the extension's underlay is anchored to the MONITOR. Maximized those
+   are the same thing. Moved or unmaximized they are not, and the sidebar then
+   shows the wallpaper's left edge while the page half a centimetre away shows
+   the slice that genuinely belongs at that spot -- a hard vertical seam, far
+   uglier than the plain scrim. Wallpaper mode does not need this gate: there
+   everything is a copy and everything is offset by the same amount, so it
+   stays coherent. It is specifically being next to a correct underlay that
+   makes a wrong copy obvious.
+
+   sizemode lives on the root element and Firefox's own CSS uses it for the
+   titlebar buttons, so it tracks maximize/unmaximize live.
+
    :hover rather than Firefox's own [sidebar-launcher-expanded] and
    [sidebar-expand-on-hover]: neither attribute matched in testing, hover does,
    and here they mean the same thing. It has to sit on sidebar-main -- that is
@@ -209,6 +222,10 @@ html|sidebar-main {
    and shorthand were all tested and none painted, while an outline in the
    same rule applied throughout. Keep it in step with --bar-tint by hand. */
 html|sidebar-main:hover {
+  background: rgb(20 20 26 / 0.96) !important;
+}
+
+:root[sizemode="maximized"] html|sidebar-main:hover {
   background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") left bottom / 1920px 1080px no-repeat scroll rgb(20 20 26 / 0.96) !important;
 }
 
