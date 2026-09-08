@@ -25,9 +25,19 @@
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 @namespace html url("http://www.w3.org/1999/xhtml");
 
-:root {
-  /* 0 = fully see-through, 1 = solid. Raise if text is hard to read. */
-  --bar-alpha: 0.15;
+/* html|html, not :root, throughout this file. The root of browser.xhtml is
+   <html id="main-window"> in the XHTML namespace and this file's default
+   namespace is XUL, so a bare :root is restricted away from it and matches
+   nothing -- silently, since it still parses. Block 7b records how that was
+   established. Everything below depended on these rules and had been running
+   without them. */
+html|html {
+  /* 0 = fully see-through, 1 = solid. Raise if text is hard to read.
+     Was 0.15, but the selector above never matched until the html|html fix, so
+     the band has rendered at 0 for its whole life. Kept at 0 so restoring the
+     selector does not quietly restyle the browser; raise it for the tint this
+     file has always described but never applied. */
+  --bar-alpha: 0;
   /* Tint laid over the desktop, as an "R G B" triplet. */
   --bar-tint: 20 20 26;
   /* Painted behind pages that declare no background of their own.
@@ -50,7 +60,7 @@
 }
 
 /* --- 1. Strip the window's own opaque background (see note 1 above) ------ */
-:root {
+html|html {
   background-color: transparent !important;
   background-image: none !important;
   --lwt-accent-color: transparent !important;
@@ -262,7 +272,7 @@ html|html[sizemode="maximized"] html|sidebar-main:hover {
    above it or the width of a sidebar beside it, so the copy lands on the real
    desktop with nothing to calibrate. userContent.css anchors the same way, so
    the toolbar and the page agree across the seam. */
-:root {
+html|html {
   /* Your screen, not your wallpaper file: 1920x1080 @ scale 1.0. The file is
      3840x2160 and 'zoom' fits it with no crop (both 16:9), so scaling to the
      screen size reproduces the desktop exactly. */
@@ -272,7 +282,7 @@ html|html[sizemode="maximized"] html|sidebar-main:hover {
 }
 
 @media -moz-pref("userchrome.wallpaper.on") {
-  :root,
+  html|html,
   html|body {
     /* WALLPAPER-DATA -- a 1x1 transparent placeholder until you run
      embed-wallpaper.py, which rewrites the line below.
