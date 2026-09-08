@@ -198,7 +198,7 @@ html|sidebar-main {
    embed-wallpaper.py the url() is a 1x1 transparent placeholder, and without
    it the titles would sit on bare page text.
 
-   Gated on [sizemode="maximized"], and only here. A copy is anchored to the
+   Gated on html|html[sizemode="maximized"], and only here. A copy is anchored to the
    WINDOW; the extension's underlay is anchored to the MONITOR. Maximized those
    are the same thing. Moved or unmaximized they are not, and the sidebar then
    shows the wallpaper's left edge while the page half a centimetre away shows
@@ -210,6 +210,18 @@ html|sidebar-main {
 
    sizemode lives on the root element and Firefox's own CSS uses it for the
    titlebar buttons, so it tracks maximize/unmaximize live.
+
+   Written html|html, not :root, and that is load-bearing. On 155 the root of
+   browser.xhtml is <html id="main-window"> in the XHTML namespace, and this
+   file's default namespace is XUL -- so a bare :root is restricted away from
+   it, parses clean, matches nothing, and lets the scrim below win silently.
+   It is the trap block 1b already calls out for body, one element further up.
+
+   Measured, not reasoned: with the window maximized and xulstore.json
+   reporting sizemode=maximized, `:root html|sidebar-main:hover` painted no
+   outline at all, while `html|html html|sidebar-main:hover` did, and adding
+   [sizemode="maximized"] to the latter still did. Every other bare :root in
+   this file is dead for the same reason -- see the README.
 
    :hover rather than Firefox's own [sidebar-launcher-expanded] and
    [sidebar-expand-on-hover]: neither attribute matched in testing, hover does,
@@ -225,7 +237,7 @@ html|sidebar-main:hover {
   background: rgb(20 20 26 / 0.96) !important;
 }
 
-:root[sizemode="maximized"] html|sidebar-main:hover {
+html|html[sizemode="maximized"] html|sidebar-main:hover {
   background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==") left bottom / 1920px 1080px no-repeat scroll rgb(20 20 26 / 0.96) !important;
 }
 
