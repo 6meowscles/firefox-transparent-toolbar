@@ -265,6 +265,22 @@ else:
         else:
             ok("userChrome.css is installed")
 
+    # A graphical editor will happily write user.js.txt or userChrome.css.txt, and a
+    # file manager that hides known extensions shows both as correctly named. Firefox
+    # reports nothing -- the files are simply never read.
+    import glob
+    stray = [f for f in (os.path.join(p, "user.js.txt"),
+                         os.path.join(p, "userChrome.css"),
+                         os.path.join(p, "userContent.css"))
+             if os.path.exists(f)]
+    stray += sorted(glob.glob(os.path.join(p, "chrome", "*.txt")))
+    if stray:
+        for f in stray:
+            warn(f"Misnamed or misplaced, so never read: {f}")
+        warn("Sheets belong in chrome/ and must not end in .txt.")
+    else:
+        ok("No .txt suffixes, and no sheets stranded outside chrome/")
+
     # The one that actually bites: both wallpaper mechanisms switched on at
     # once. The stylesheet's copy is opaque and sits on top, so the extension
     # is invisible and looks like it never loaded.

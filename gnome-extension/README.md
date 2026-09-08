@@ -189,3 +189,15 @@ run something else.
 - **Only helps where Firefox is actually transparent.** It changes what is behind the
   window, not whether Firefox has an alpha channel — that's still `userChrome.css`'s
   job.
+- **The hovered sidebar is still a copy, so you still need `embed-wallpaper.py`.** When
+  the launcher expands it floats *over* the page, and CSS cannot reach the compositor's
+  underlay to fill it — so the stylesheet paints a wallpaper copy there in both modes.
+  That copy is anchored to the window while the underlay is anchored to the monitor, so
+  it is gated on `html|html[sizemode="maximized"]`: correct maximized, and a plain scrim
+  otherwise rather than a visibly misaligned seam. Skip the embed step and it falls back
+  to that scrim permanently.
+- **The sidebar can stay expanded after the window idles.** Firefox's `expand-on-hover`
+  launcher keeps its `:hover` state when the pointer stops being over it without a leave
+  event reaching Gecko. Nothing here can un-latch it; moving the pointer onto the sidebar
+  or Alt-Tabbing clears it. See the
+  [main README's troubleshooting](../README.md#troubleshooting).

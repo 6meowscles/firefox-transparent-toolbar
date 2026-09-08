@@ -57,7 +57,22 @@ a user stylesheet can clear `--lwt-accent-color`, which is what this file does.
    user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
    ```
 
-4. **Fully quit Firefox and start it again.** Not just closing the window — the process
+4. **Check the filenames before restarting.** Graphical editors routinely append `.txt`
+   when saving a new file — `user.js.txt`, `userChrome.css.txt` — and file managers hide
+   known extensions, so the name *looks* right while the file is simply never read.
+   Nothing warns you. A terminal shows the real names:
+
+   ```sh
+   ls -a /path/to/your/profile/user.js /path/to/your/profile/chrome/
+   ```
+
+   You want exactly `user.js`, `chrome/userChrome.css` and `chrome/userContent.css` — no
+   `.txt`, no `.css.css`, and the sheets *inside* `chrome/` rather than beside it. Fix
+   with `mv user.js.txt user.js`. To stop it recurring, turn on "show file extensions"
+   in your file manager, or create the file from the terminal with `touch` first and only
+   then open it in the editor.
+
+5. **Fully quit Firefox and start it again.** Not just closing the window — the process
    has to exit. Chrome CSS is read once, at startup.
 
 ## Tuning
@@ -66,11 +81,20 @@ Everything is driven by three variables at the top of the file:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `--bar-alpha` | `0.15` | Tint strength. `0` is fully see-through; raise it if text is hard to read over a busy wallpaper. |
+| `--bar-alpha` | `0` | Tint strength over the toolbar band. `0` is fully see-through; raise it if text is hard to read over a busy wallpaper. |
 | `--bar-tint` | `20 20 26` | The tint colour, as an `R G B` triplet. |
-| `--content-backstop` | `#1b1b1f` | Painted behind pages that declare no background of their own, so they don't go see-through too. |
+| `--content-backstop` | `transparent` | Painted behind pages that declare no background of their own. `transparent` lets whatever is behind the window through; set a colour to opt out. |
 
 Restart after editing.
+
+`--bar-alpha` defaults to `0`, not the `0.15` this file described for most of its life,
+and the reason is worth knowing. The block declaring these variables was written `:root`,
+which matches nothing here — see [the namespace note](#a-note-on-selector-names) — so the
+band rendered at `0` no matter what the file said. Fixing the selector while leaving
+`0.15` in place would have made a correctness fix arrive as an unannounced restyle. The
+derived fills are deliberately *not* zeroed: `--bar-fill-solid` is what keeps the findbar
+and the open address-bar panel from going see-through over the page, which was a bug, not
+a look.
 
 
 ## Optional: a see-through page area too
@@ -87,23 +111,32 @@ cp userContent.css /path/to/your/profile/chrome/
 same screen size — so re-copy both after every run. Restart Firefox and the New Tab page
 picks up exactly where the toolbar left off.
 
-**It is a copy, not a hole.** The page area can't be made genuinely see-through on
-Firefox 155. `about:newtab` renders in the privileged about content process and its
-canvas is painted before any page style applies: clearing the background on `:root`,
-`body`, `#root`, `.outer-wrapper` and `main`, with and without
-`browser.tabs.allow_transparent_browser`, leaves the same opaque slab. A *red* background
-set from the same file shows up fine, so the sheet is applying — the paint just isn't the
-document's to remove.
+**Two modes, following `userchrome.wallpaper.on`.** With the pref `false` the sheet
+clears the New Tab canvas, so the page area is genuinely see-through and shows whatever
+is behind the window — including the GNOME extension's wallpaper underlay, which stays
+aligned as you move the window. With it `true` the sheet paints a copy of the wallpaper
+instead, anchored `background-position: right bottom`, which lines up with the real
+desktop while the window is maximized.
 
-So the page paints its own copy, anchored with `background-position: left bottom`. The
-content viewport's bottom edge is the window's bottom edge, so on a maximized window that
-lines the copy up with the real desktop exactly, with no offset to calibrate — verified
-pixel-for-pixel against the source image. Same trade as wallpaper mode: correct while
-maximized.
+The see-through half also needs:
 
-Pair it with wallpaper mode. In see-through mode the toolbar shows whatever is actually
-behind the window while the page shows the copy, so the two only agree over a bare
-desktop.
+```js
+user_pref("browser.tabs.allow_transparent_browser", true);
+```
+
+**An earlier version of this file insisted the canvas could not be cleared on 155**, and
+it was wrong in a way worth recording, because the evidence looked conclusive. That test
+cleared the background on `:root`, `body`, `#root`, `.outer-wrapper` and `main` and still
+got an opaque slab. But every one of those is document-level, and `userChrome.css` was
+painting an opaque `--content-backstop` on `.browserContainer` — which sits *below* the
+document and *above* the window's alpha. Clearing the document only ever revealed the
+backstop, which is indistinguishable from a canvas that refuses to clear. With the
+backstop transparent, `background: transparent` reaches the window.
+
+`right bottom`, not `left bottom`: a sidebar is chrome, so it insets the content
+viewport's *left* edge while leaving the right edge on the window frame. Anchoring left
+slides the whole page sideways by the sidebar's width. Swap both sheets to `left bottom`
+if you keep your sidebar on the right.
 
 ## Optional: wallpaper mode
 
@@ -271,12 +304,36 @@ opaque copy — which reads exactly like an extension that never loaded.
 
 ## Troubleshooting
 
-**Nothing changed at all.** Confirm the pref is actually set and that you edited the
-profile `about:profiles` says is in use. To prove the sheet is being loaded, add
+**Nothing changed at all.** Rule out the filename first — `user.js.txt` and
+`userChrome.css.txt` are what a graphical editor writes if you let it, and a file manager
+that hides extensions will show both as correctly named. `ls -a` in a terminal is the only
+reliable check; see install step 4. Then confirm the pref is actually set and that you
+edited the profile `about:profiles` says is in use. To prove the sheet is being loaded, add
 `#nav-bar { background-color: #ff00ff !important; }` on the **first** line and restart —
 a magenta address bar row means the file is live and the problem is elsewhere. Put it
 first, not last: if anything further down the file is malformed, a probe at the end is
 dropped along with it and you learn nothing.
+
+**A rule you added does nothing, and the selector looks correct.** Check the namespace
+before you touch the declaration. This file declares XUL as its default namespace, which
+silently restricts any selector whose element half is unqualified — including one written
+only as a pseudo-class. `:root` is the trap that has cost the most time here: on Firefox
+155 the root of `browser.xhtml` is `<html id="main-window">` in the **XHTML** namespace,
+so `:root` parses, matches nothing, and reports no error at all. Every root-level rule in
+this file is therefore written `html|html`, the same way `body` is written `html|body` and
+the sidebar `html|sidebar-main`.
+
+It fails silently, so prove the *selector* before debugging the *declaration* — and put
+the probe on the first line, because one at the end is dropped along with anything
+malformed above it:
+
+```css
+html|html html|sidebar-main:hover { outline: 4px solid lime !important; }
+```
+
+A green ring means the selector matches and the problem is your declaration. No ring
+means the selector never matched. Swapping `html|html` for `:root` in that probe is the
+quickest way to see the difference for yourself.
 
 **The bar is still a solid block, and the sheet *is* loading.** Your theme is probably
 painting a `theme_frame` image. Firefox draws it on `<body>` whenever the image isn't in
@@ -353,8 +410,9 @@ print('comments', t.count('/'+chr(42)), t.count(chr(42)+'/'))
 "
 ```
 
-Both pairs must match — 18 and 18, 20 and 20 for the shipped file. This is worth
-checking any time you have hand-edited an embedded sheet: the `data:` URI is a single
+Both pairs must match *each other*. The absolute numbers move every time the file
+changes, so compare `{` against `}` and `/*` against `*/` rather than against any figure
+quoted here. This is worth checking any time you have hand-edited an embedded sheet: the `data:` URI is a single
 line of roughly a megabyte, and some editors will happily reflow or truncate it.
 
 **Check the whole install in one command.** Prints the profile Firefox actually uses,
@@ -374,6 +432,9 @@ if [ -f "$S" ]; then
 else echo "  MISSING at $S"; fi
 if [ -f "$P/chrome/userContent.css" ]; then echo "  userContent.css: present"
 else echo "  userContent.css: absent (page area stays opaque)"; fi
+for f in "$P"/user.js.txt "$P"/chrome/*.txt "$P"/userChrome.css "$P"/userContent.css; do
+  [ -e "$f" ] && echo "  MISNAMED OR MISPLACED: $f"
+done
 grep -h "legacyUserProfileCustomizations" "$P/user.js" "$P/prefs.js" 2>/dev/null
 grep -h "userchrome.wallpaper.on" "$P/user.js" "$P/prefs.js" 2>/dev/null
 '
@@ -389,7 +450,7 @@ away and back, clears it.
 
 Nothing in this repo can fix that: `:hover` is Gecko's, and there is no CSS that
 un-latches it. What the stylesheet can do is make the stuck state harmless, which is
-why the sidebar's wallpaper copy is gated on `:root[sizemode="maximized"]` — a copy is
+why the sidebar's wallpaper copy is gated on `html|html[sizemode="maximized"]` — a copy is
 anchored to the window while the extension's underlay is anchored to the monitor, so
 unmaximized the two disagree and the sidebar would meet the page in a hard vertical
 seam. Gated, it falls back to the plain scrim instead.
@@ -399,6 +460,10 @@ If you would rather not have the behaviour at all, set `sidebar.visibility` to
 `sidebar.expandOnHover` off.
 
 ## A note on selector names
+
+Two things bite here. The first is namespaces — a bare `body`, `sidebar-main` or `:root`
+never matches, and the [troubleshooting entry above](#troubleshooting) covers why and how
+to prove it. The second is renaming.
 
 Firefox 155 renamed several theme variables. Older guides still reference
 `--toolbar-bgcolor` and `--tab-selected-bgcolor`; the current names are
