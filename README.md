@@ -379,6 +379,25 @@ grep -h "userchrome.wallpaper.on" "$P/user.js" "$P/prefs.js" 2>/dev/null
 '
 ```
 
+**The sidebar is left expanded and tinted after the window sits idle.** Firefox's
+`expand-on-hover` sidebar can be left in the hover state when the pointer stops being
+over it *without a leave event reaching Gecko* — the screen blanking, or focus moving
+elsewhere, rather than the mouse actually travelling off it. As far as the stylesheet
+is concerned `:hover` is still matching, so the sidebar keeps both its expanded width
+and its background. Moving the pointer onto the sidebar and off again, or Alt-Tabbing
+away and back, clears it.
+
+Nothing in this repo can fix that: `:hover` is Gecko's, and there is no CSS that
+un-latches it. What the stylesheet can do is make the stuck state harmless, which is
+why the sidebar's wallpaper copy is gated on `:root[sizemode="maximized"]` — a copy is
+anchored to the window while the extension's underlay is anchored to the monitor, so
+unmaximized the two disagree and the sidebar would meet the page in a hard vertical
+seam. Gated, it falls back to the plain scrim instead.
+
+If you would rather not have the behaviour at all, set `sidebar.visibility` to
+`always-show` or `hide-sidebar` (the third value is `expand-on-hover`), or turn
+`sidebar.expandOnHover` off.
+
 ## A note on selector names
 
 Firefox 155 renamed several theme variables. Older guides still reference
