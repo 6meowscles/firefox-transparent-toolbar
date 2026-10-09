@@ -1,66 +1,98 @@
 # firefox-transparent-toolbar
 
-A `userChrome.css` that makes the Firefox toolbar band — tab strip, address bar and
-bookmarks bar — genuinely see-through to your desktop, not merely dark.
+A Firefox toolbar that is genuinely see-through, onto your **wallpaper** — not merely
+dark, not whichever window happens to be behind it, and still lined up when you move
+the window.
 
-Written and tested against **Firefox 155 on Linux** (GNOME / Wayland).
+https://github.com/user-attachments/assets/0794dbd2-7c4a-4dce-9322-4da9790b779f
+
+Two pieces do it together:
+
+- **`userChrome.css`** makes the Firefox toolbar band — tab strip, address bar and
+  bookmarks bar — and the page area actually transparent.
+- **[A GNOME Shell extension](gnome-extension/)** puts the real desktop wallpaper
+  directly beneath the Firefox window, so those transparent pixels land on your
+  wallpaper and not on the editor or chat window sitting behind it. Because it lives in
+  the compositor, it stays aligned as you drag, resize or unmaximize the window.
+
+That pairing is the recommended setup and the one this README leads with. Not on GNOME,
+or don't want an extension? The stylesheet works on its own too, in one of
+[two fallback modes](#without-the-extension).
+
+Written and tested against **Firefox 155 on Linux**, **GNOME Shell 50.4**, Wayland. The
+extension supports GNOME Shell 48–50.
 
 ![Firefox with a transparent toolbar floating over the desktop](assets/see-through-floating.jpg)
 
-The window's chrome dissolves into whatever is behind it. Above, an unmaximized window —
-the wallpaper runs straight through the toolbar and the page with no seam.
+An unmaximized window — the wallpaper runs straight through the toolbar and the page
+with no seam.
 
 ![The New Tab page continuing the desktop](assets/see-through-newtab.jpg)
 
-Both shots are see-through mode over a bare desktop; wallpaper mode looks the same here
-and only differs when another window sits behind Firefox. The vertical tab strip is a
-Firefox setting, not part of this theme — it inherits the transparency like any other
-toolbar.
-
-## Why this isn't a theme
-
-Themes can't do it. Firefox paints the window background from your theme's `frame`
-colour, and treats that colour as opaque by definition — the comment is right there in
-`browser-shared.css`:
-
-```css
-:root[lwtheme] & {
-  background-color: var(--lwt-accent-color); /* Known opaque */
-```
-
-So a theme can set colours *within* an opaque window, but it can't remove the window's
-backing. Themes that advertise transparency render as solid black for this reason. Only
-a user stylesheet can clear `--lwt-accent-color`, which is what this file does.
+The vertical tab strip is a Firefox setting, not part of this theme — it inherits the
+transparency like any other toolbar.
 
 ## Install
 
-1. **Find your profile folder.** Open `about:profiles` and copy the **Root Directory**
+The order matters: get Firefox transparent first, then add the extension underneath it.
+An extension under an opaque Firefox looks exactly like an extension that failed to
+load.
+
+1. **Get the files.**
+
+   ```sh
+   git clone https://github.com/6meowscles/firefox-transparent-toolbar
+   cd firefox-transparent-toolbar
+   ```
+
+2. **Find your profile folder.** Open `about:profiles` and copy the **Root Directory**
    of the profile marked *This is the profile in use*.
 
    Firefox 155 on Linux stores profiles under `~/.config/mozilla/firefox/<id>`.
    Older builds use `~/.mozilla/firefox/<id>`. Don't guess — check `about:profiles`,
    because writing to the wrong one looks exactly like the CSS silently not working.
 
-2. **Drop the file in.**
+3. **Embed your wallpaper.** Needs [Pillow](https://pypi.org/project/pillow/)
+   (`pip install pillow`).
 
    ```sh
-   cd /path/to/your/profile
-   mkdir -p chrome
-   cp /path/to/userChrome.css chrome/
+   python3 embed-wallpaper.py               # reads your current GNOME wallpaper
+   python3 embed-wallpaper.py ~/pic.jpg     # ...or any image you like
    ```
 
-3. **Enable user stylesheets.** They've been off by default since Firefox 69. Either set
-   `toolkit.legacyUserProfileCustomizations.stylesheets` to `true` in `about:config`, or
-   put it in a `user.js` in the profile root so it survives a `prefs.js` rewrite:
+   Run **one** of those. Yes, even with the extension: when the sidebar expands on
+   hover it floats *over* the page, where CSS cannot reach the compositor's underlay,
+   so the stylesheet carries a copy of the wallpaper for that one spot. Skip this and
+   the hovered sidebar goes black. The script writes next to *itself*, not into your
+   profile — the next step is what puts it there.
+
+4. **Copy both sheets into the profile.** Both, every time you re-run step 3 — they are
+   generated together.
+
+   ```sh
+   mkdir -p /path/to/your/profile/chrome
+   cp userChrome.css userContent.css /path/to/your/profile/chrome/
+   ```
+
+5. **Set the prefs** in a `user.js` in the profile root (create it if it isn't there):
 
    ```js
    user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+   user_pref("browser.tabs.allow_transparent_browser", true);
+   user_pref("userchrome.wallpaper.on", false);
    ```
 
-4. **Check the filenames before restarting.** Graphical editors routinely append `.txt`
-   when saving a new file — `user.js.txt`, `userChrome.css.txt` — and file managers hide
-   known extensions, so the name *looks* right while the file is simply never read.
-   Nothing warns you. A terminal shows the real names:
+   The first turns user stylesheets on — they've been off by default since Firefox 69.
+   The second lets the page area go transparent. The third keeps the stylesheet's own
+   [wallpaper mode](#wallpaper-mode) off, because its copy is opaque and would sit on
+   top of the extension, hiding it completely while it runs perfectly. Use `user.js`
+   rather than `about:config`: it is re-applied at every start, so it survives a
+   `prefs.js` rewrite.
+
+6. **Check the filenames.** Graphical editors routinely append `.txt` when saving a new
+   file — `user.js.txt`, `userChrome.css.txt` — and file managers hide known extensions,
+   so the name *looks* right while the file is simply never read. Nothing warns you. A
+   terminal shows the real names:
 
    ```sh
    ls -a /path/to/your/profile/user.js /path/to/your/profile/chrome/
@@ -72,8 +104,28 @@ a user stylesheet can clear `--lwt-accent-color`, which is what this file does.
    in your file manager, or create the file from the terminal with `touch` first and only
    then open it in the editor.
 
-5. **Fully quit Firefox and start it again.** Not just closing the window — the process
+7. **Install the extension.**
+
+   ```sh
+   cd gnome-extension && ./install.sh
+   ```
+
+   It copies the extension in, enables it, and checks the Firefox side for the settings
+   above — each of which fails silently, so if steps 4–6 are done its checks come back
+   green. Nothing it does needs root. Options, the manual route, and what every check
+   means are in [gnome-extension/README.md](gnome-extension/README.md).
+
+8. **Log out and back in.** Not optional on Wayland: GNOME only enumerates extensions at
+   startup.
+
+9. **Fully quit Firefox and start it again.** Not just closing the window — the process
    has to exit. Chrome CSS is read once, at startup.
+
+10. **Check it's the real thing.** Unmaximize the window and drag it around. The
+    wallpaper behind the toolbar should *track the window* and stay lined up with the
+    desktop. If the image stays put while the window moves, you are looking at the
+    stylesheet's copy — `userchrome.wallpaper.on` is still `true`. If nothing is
+    see-through at all, start at [Troubleshooting](#troubleshooting).
 
 ## Tuning
 
@@ -96,16 +148,40 @@ derived fills are deliberately *not* zeroed: `--bar-fill-solid` is what keeps th
 and the open address-bar panel from going see-through over the page, which was a bug, not
 a look.
 
+## How it works
 
-## Optional: a see-through page area too
+### Why this isn't a theme
 
-By default the page area stays opaque, so the wallpaper stops at the bottom of the
-bookmarks bar and the window looks half-finished. `userContent.css` carries it down the
-rest of the window.
+Themes can't do it. Firefox paints the window background from your theme's `frame`
+colour, and treats that colour as opaque by definition — the comment is right there in
+`browser-shared.css`:
 
-```sh
-cp userContent.css /path/to/your/profile/chrome/
+```css
+:root[lwtheme] & {
+  background-color: var(--lwt-accent-color); /* Known opaque */
 ```
+
+So a theme can set colours *within* an opaque window, but it can't remove the window's
+backing. Themes that advertise transparency render as solid black for this reason. Only
+a user stylesheet can clear `--lwt-accent-color`, which is what this file does.
+
+### Why the wallpaper needs an extension
+
+A transparent pixel shows what is *directly below it in the stacking order* — the next
+window down, not the desktop — and neither Wayland nor Mutter has a "see through to the
+wallpaper specifically" mode. No stylesheet can reach past that, because the stylesheet
+isn't what does the compositing. So the extension lifts the wallpaper up instead: it
+inserts a `Meta.BackgroundActor` for the monitor directly beneath the Firefox window
+actor, clipped to the window's frame. The actor is anchored to the monitor and only the
+clip follows the window, so what shows through is the part of the wallpaper that
+genuinely belongs at that spot on screen. The full explanation, and its known limits,
+are in [gnome-extension/README.md](gnome-extension/README.md#why-an-extension-is-the-only-way).
+
+### The page area
+
+`userContent.css` carries the see-through down past the toolbar and into the page area.
+Without it the wallpaper stops at the bottom of the bookmarks bar and the window looks
+half-finished.
 
 `embed-wallpaper.py` writes that file at the same time as `userChrome.css` — same image,
 same screen size — so re-copy both after every run. Restart Firefox and the New Tab page
@@ -118,11 +194,9 @@ aligned as you move the window. With it `true` the sheet paints a copy of the wa
 instead, anchored `background-position: right bottom`, which lines up with the real
 desktop while the window is maximized.
 
-The see-through half also needs:
-
-```js
-user_pref("browser.tabs.allow_transparent_browser", true);
-```
+The see-through half is what `browser.tabs.allow_transparent_browser` in
+[install step 5](#install) is for; without it the page area stays opaque whatever the
+sheet says.
 
 **An earlier version of this file insisted the canvas could not be cleared on 155**, and
 it was wrong in a way worth recording, because the evidence looked conclusive. That test
@@ -138,7 +212,20 @@ viewport's *left* edge while leaving the right edge on the window frame. Anchori
 slides the whole page sideways by the sidebar's width. Swap both sheets to `left bottom`
 if you keep your sidebar on the right.
 
-## Optional: wallpaper mode
+## Without the extension
+
+Two fallbacks, for when you are not on GNOME or would rather not run an extension. Both
+use the same stylesheet; follow [Install](#install) and skip steps 7 and 8.
+
+### See-through only
+
+What you get from [Install](#install) without steps 7 and 8. The toolbar and page
+area are genuinely transparent — to whatever is *actually* behind the window. Over a
+bare desktop that is your wallpaper, and it looks exactly like the screenshots above.
+Over another window, it is that window. You can skip step 3 here, at the cost of a sidebar that turns to a plain
+scrim on hover.
+
+### Wallpaper mode
 
 True transparency is transparent to whatever is actually behind the window — which is
 usually another window, not your desktop. If you want the wallpaper to show *regardless*
@@ -146,33 +233,26 @@ of what's behind Firefox, this mode paints your wallpaper as the window's own
 background, positioned to line up with where the window sits on screen. Terminal
 emulators call this pseudo-transparency.
 
-Needs [Pillow](https://pypi.org/project/pillow/) (`pip install pillow`).
+Follow [Install](#install), skipping steps 7 and 8, with two differences:
 
-Run **one** of these — the second is the same command pointed at a file of your choice,
-not a second step:
+- **Step 3 is required**, not just for the sidebar — the embedded copy *is* the
+  wallpaper in this mode.
+- **In step 5, set `userchrome.wallpaper.on` to `true`.** Keep it in `user.js`: a
+  `false` left there is re-applied at every start and puts the old value straight back.
+  Once Firefox has started, the pref also toggles live in `about:config` — `true` for
+  the wallpaper, `false` for genuine see-through.
 
-```sh
-python3 embed-wallpaper.py               # reads your current GNOME wallpaper
-python3 embed-wallpaper.py ~/pic.jpg     # ...or any image you like
-```
-
-Then copy the sheets into your profile, set `userchrome.wallpaper.on` to `true` in
-`about:config`, and restart Firefox. The pref toggles live afterwards — `true` for the
-wallpaper, `false` for genuine see-through.
+And leave the extension off (`gnome-extensions disable
+firefox-wallpaper-underlay@6meowscles.github.io` if you installed it) — its underlay
+would be running perfectly and invisible under the opaque copy.
 
 **Copy both sheets, every time.** The script rewrites `userChrome.css` and
 `userContent.css` together, and they position their copies by the same rule. Ship one
 without the other and the toolbar and the page area disagree — the image reads as
 offset across the whole window, which looks nothing like the "one file is stale" problem
-it actually is.
-
-```sh
-cp userChrome.css userContent.css /path/to/your/profile/chrome/
-```
-
-Note the script writes the copy next to *itself*, not into your profile. Running it and
-forgetting the `cp` leaves the profile on the previous image, which is the single
-easiest way to lose an evening here.
+it actually is. And the script writes next to *itself*, not into your profile: running
+it and forgetting the `cp` leaves the profile on the previous image, which is the
+single easiest way to lose an evening here.
 
 The script scales and centre-crops the image to your screen the way GNOME's `zoom`
 option does, so the copy matches the real desktop, then embeds it in the stylesheet as a
@@ -199,26 +279,6 @@ aligned while Firefox is **maximized** — move or unmaximize it and the image s
 while the window doesn't. It won't follow a wallpaper change either; re-run the script.
 You can have "always shows the wallpaper" or "always correct as the window moves", not
 both.
-
-## Optional: the GNOME extension instead
-
-Wallpaper mode trades alignment for always showing the wallpaper. `gnome-extension/`
-removes the trade: it inserts the wallpaper into the compositor directly beneath the
-Firefox window, clipped to the window, so the toolbar stays genuinely see-through,
-ignores the windows in between, *and* stays aligned as the window moves.
-
-```sh
-cd gnome-extension && ./install.sh
-```
-
-Then log out and back in — GNOME only enumerates extensions at startup, and there is
-no way around that on Wayland. The script also checks the two settings below, which
-are the ways this silently does nothing. Full steps, before and after, in
-[gnome-extension/README.md](gnome-extension/README.md).
-
-Use one or the other — with the extension running, set `userchrome.wallpaper.on` back
-to `false`, and make sure `--content-backstop` is `transparent` or the page area stays
-an opaque slab while the toolbar goes see-through.
 
 ## Switching between the two modes
 
@@ -307,7 +367,7 @@ opaque copy — which reads exactly like an extension that never loaded.
 **Nothing changed at all.** Rule out the filename first — `user.js.txt` and
 `userChrome.css.txt` are what a graphical editor writes if you let it, and a file manager
 that hides extensions will show both as correctly named. `ls -a` in a terminal is the only
-reliable check; see install step 4. Then confirm the pref is actually set and that you
+reliable check; see install step 6. Then confirm the pref is actually set and that you
 edited the profile `about:profiles` says is in use. To prove the sheet is being loaded, add
 `#nav-bar { background-color: #ff00ff !important; }` on the **first** line and restart —
 a magenta address bar row means the file is live and the problem is elsewhere. Put it

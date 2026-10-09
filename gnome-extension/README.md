@@ -3,7 +3,15 @@
 A GNOME Shell extension that makes the see-through toolbar show your **wallpaper**
 instead of whatever window happens to be behind Firefox — without giving up real
 transparency, and without the alignment problem that `userChrome.css`'s
-[wallpaper mode](../README.md#optional-wallpaper-mode) has.
+[wallpaper mode](../README.md#wallpaper-mode) has.
+
+https://github.com/user-attachments/assets/0794dbd2-7c4a-4dce-9322-4da9790b779f
+
+This is the recommended way to run
+[firefox-transparent-toolbar](../README.md); the main README's
+[Install](../README.md#install) walks through the stylesheet and this extension
+together, in order. This page is the detail: how it works, what the installer checks,
+and its known limits.
 
 Tested against **GNOME Shell 50.4** on Wayland.
 
@@ -44,7 +52,7 @@ wallpaper.
 
 1. **Install the stylesheet first, and confirm it works.** This extension changes what
    is *behind* the Firefox window; it does not make Firefox transparent — that is
-   `userChrome.css`'s job. Follow [the main README](../README.md#install) and check
+   `userChrome.css`'s job. Follow steps 1–6 of [the main README's Install](../README.md#install) and check
    the toolbar is already see-through. Adding the extension to an opaque Firefox looks
    exactly like an extension that failed to load.
 
