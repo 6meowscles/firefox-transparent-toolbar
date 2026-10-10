@@ -13,7 +13,7 @@ This is the recommended way to run
 together, in order. This page is the detail: how it works, what the installer checks,
 and its known limits.
 
-Tested against **GNOME Shell 50.4** on Wayland.
+Tested against **GNOME Shell 50.4** and **51.0** on Wayland.
 
 ## Why an extension is the only way
 
@@ -71,7 +71,7 @@ wallpaper.
    A colour there makes the page area an opaque slab while the toolbar and sidebar go
    see-through.
 
-4. **Check your shell.** `gnome-shell --version` should be 48, 49 or 50.
+4. **Check your shell.** `gnome-shell --version` should be 48, 49, 50 or 51.
 
 5. **Get the files.**
 
@@ -106,7 +106,10 @@ UUID, and reports on the Firefox side. Nothing it does needs root.
    gnome-extensions info firefox-wallpaper-underlay@6meowscles.github.io
    ```
 
-   `State: ACTIVE` means it is running. `INITIALIZED` or `INACTIVE` means it is
+   `State: ACTIVE` means it is running. `OUT OF DATE` means your GNOME Shell major
+   version is missing from `shell-version` in `metadata.json` and the shell refused to
+   load it — see [Troubleshooting](../README.md#troubleshooting). `INITIALIZED` or
+   `INACTIVE` means it is
    installed but not enabled; `ERROR` means it threw, and
 
    ```sh

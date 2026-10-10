@@ -20,7 +20,7 @@ or don't want an extension? The stylesheet works on its own too, in one of
 [two fallback modes](#without-the-extension).
 
 Written and tested against **Firefox 155 on Linux**, **GNOME Shell 50.4**, Wayland. The
-extension supports GNOME Shell 48–50.
+extension supports GNOME Shell 48–51.
 
 ![Firefox with a transparent toolbar floating over the desktop](assets/see-through-floating.jpg)
 
@@ -407,6 +407,28 @@ Plenty of themes ship a flat single-colour band as that image, which covers the 
 toolbar and looks identical to an opaque background. This file already clears it. Note
 the rule needs an `html|` prefix — a user stylesheet declares XUL as its default
 namespace, so a bare `body` selector matches a XUL element and silently never applies.
+
+**After a system update the bar shows the window behind Firefox, not the wallpaper.**
+The stylesheet is fine; the extension stopped loading. A GNOME Shell major-version bump
+(50 → 51 on CachyOS in October 2026) leaves the extension installed and listed as
+enabled, but the shell refuses to load any extension whose `metadata.json` doesn't name
+the running major version. It logs nothing to the journal and shows nothing on screen.
+With no underlay, the see-through toolbar falls back to plain transparency, which is
+exactly what see-through-only mode looks like. So it reads as the extension
+"breaking" when it was never started. One command tells the two apart:
+
+```sh
+gnome-shell --version
+gnome-extensions info firefox-wallpaper-underlay@6meowscles.github.io
+```
+
+`State: OUT OF DATE` is this case. Pull the repo (or add the new major to
+`shell-version` in `gnome-extension/metadata.json` yourself), re-run
+`gnome-extension/install.sh`, and log out and back in. The shell checks versions only at
+startup, so toggling the extension off and on is not enough. Before adding a version by hand, check
+that the APIs `extension.js` calls still exist in the new release. Flipping
+`disable-extension-version-validation` also works, but it un-gates every extension on
+the system, not just this one.
 
 **The bar goes dark instead of showing the desktop.** Your compositor isn't giving the
 window an alpha channel. Nothing in CSS fixes that; raise `--bar-alpha` and treat it as

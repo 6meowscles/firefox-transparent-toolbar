@@ -17,7 +17,7 @@ except the parts that need your account.
   in context.
 - **Licensing.** GPL-2.0-or-later, matching GNOME Shell itself. `LICENSE` at the repo
   root, an SPDX header on `extension.js`, and the licence goes inside the bundle.
-- **`shell-version`** lists `48`, `49`, `50` — released versions only. Listing an
+- **`shell-version`** lists `48` through `51` — released versions only. Listing an
   unreleased one is a rejection.
 - **`disable()` fully reverses `enable()`.** This is the rule most submissions fail.
   Every signal is disconnected, every `BackgroundManager` destroyed, and the two Maps
