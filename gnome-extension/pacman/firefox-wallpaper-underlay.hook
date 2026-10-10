@@ -1,0 +1,18 @@
+# Installed to /etc/pacman.d/hooks/ by `install.sh --pacman-hook`.
+#
+# GNOME Shell refuses to load an extension whose metadata.json does not name
+# its major version, and says nothing about it: the extension stays listed as
+# enabled, the journal is quiet, and the toolbar just shows the window behind
+# Firefox again. The running shell keeps the old version loaded until the next
+# login, so a warning here arrives before anything visibly breaks.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = gnome-shell
+
+[Action]
+Description = Checking Firefox Wallpaper Underlay supports this GNOME Shell...
+When = PostTransaction
+Exec = /usr/local/lib/firefox-wallpaper-underlay/check-shell-version

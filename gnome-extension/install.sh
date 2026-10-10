@@ -2,9 +2,10 @@
 #
 # Install the Firefox Wallpaper Underlay GNOME Shell extension.
 #
-#     ./install.sh              copy the extension in and enable it
-#     ./install.sh --link       symlink it instead, so edits here go live
-#     ./install.sh --uninstall  remove it again
+#     ./install.sh                copy the extension in and enable it
+#     ./install.sh --link         symlink it instead, so edits here go live
+#     ./install.sh --uninstall    remove it again
+#     ./install.sh --pacman-hook  Arch: warn when a gnome-shell upgrade drops it
 #
 # The manual version of this is four commands and two things that are easy to
 # get wrong: enabling an extension the running shell has never heard of, and
@@ -50,11 +51,13 @@ PY
 
 link=0
 uninstall=0
+pacman_hook=0
 for arg in "$@"; do
     case $arg in
         --link)      link=1 ;;
         --uninstall) uninstall=1 ;;
-        -h|--help)   sed -n '3,7p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --pacman-hook) pacman_hook=1 ;;
+        -h|--help)   sed -n '3,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *)           die "Unknown option: $arg (try --help)" ;;
     esac
 done
@@ -65,6 +68,27 @@ uuid=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["uuid"])'
 extdir="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions"
 dest="$extdir/$uuid"
 
+hook_file=/etc/pacman.d/hooks/firefox-wallpaper-underlay.hook
+hook_exec=/usr/local/lib/firefox-wallpaper-underlay/check-shell-version
+
+
+# --- pacman hook ----------------------------------------------------------
+# A GNOME Shell major upgrade (twice a year) makes the shell refuse this
+# extension at the next login, silently, until metadata.json names the new
+# version. The hook turns that into a warning in the pacman output instead.
+# It writes outside $HOME, so it is opt-in and the only part that needs sudo.
+if [ "$pacman_hook" = 1 ]; then
+    step "Installing the pacman hook"
+    command -v pacman >/dev/null || die "pacman not found; this hook is for Arch and derivatives."
+    sudo install -Dm755 -- "$here/pacman/check-shell-version.sh" "$hook_exec"
+    ok "$hook_exec"
+    sudo install -Dm644 -- "$here/pacman/firefox-wallpaper-underlay.hook" "$hook_file"
+    ok "$hook_file"
+    printf '\nThe next gnome-shell upgrade will say whether this extension still loads.\n'
+    printf 'Check it now with:\n    %s%s%s\n' "$dim" "$hook_exec" "$off"
+    exit 0
+fi
+
 
 # --- uninstall ------------------------------------------------------------
 if [ "$uninstall" = 1 ]; then
@@ -73,6 +97,11 @@ if [ "$uninstall" = 1 ]; then
     list_edit remove "$uuid"        # or the shell re-enables it after the logout
     rm -rf -- "$dest"
     ok "Deleted $dest"
+    if [ -e "$hook_file" ] || [ -e "$hook_exec" ]; then
+        sudo rm -f -- "$hook_file" "$hook_exec"
+        sudo rmdir -- "$(dirname -- "$hook_exec")" 2>/dev/null || true
+        ok "Removed the pacman hook"
+    fi
     printf '\nLog out and back in to unload it from the running shell.\n'
     exit 0
 fi
@@ -99,6 +128,11 @@ else
     supported=$(python3 -c 'import json,sys; print(", ".join(json.load(open(sys.argv[1]))["shell-version"]))' "$here/metadata.json")
     warn "GNOME Shell $shell_version is not in metadata.json (shell-version: $supported)."
     warn "It will refuse to load. Add \"${shell_version%%.*}\" to that list if you want to try it."
+fi
+
+if command -v pacman >/dev/null && [ ! -e "$hook_file" ]; then
+    warn "The next GNOME major upgrade will silently stop this loading. To be warned"
+    warn "when pacman installs it, run: $0 --pacman-hook"
 fi
 
 session=${XDG_SESSION_TYPE:-unknown}

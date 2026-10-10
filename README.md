@@ -430,6 +430,10 @@ that the APIs `extension.js` calls still exist in the new release. Flipping
 `disable-extension-version-validation` also works, but it un-gates every extension on
 the system, not just this one.
 
+On Arch and derivatives, `gnome-extension/install.sh --pacman-hook` makes the next
+upgrade warn you about this in the pacman output, before you log out. See the
+[extension's options](gnome-extension/README.md#options).
+
 **The bar goes dark instead of showing the desktop.** Your compositor isn't giving the
 window an alpha channel. Nothing in CSS fixes that; raise `--bar-alpha` and treat it as
 a tint instead.

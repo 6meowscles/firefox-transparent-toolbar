@@ -92,7 +92,8 @@ it tells you.
 If it is not executable, `chmod +x install.sh` or run `bash install.sh`.
 
 It copies the extension in, enables it, cleans up an install left under an older
-UUID, and reports on the Firefox side. Nothing it does needs root.
+UUID, and reports on the Firefox side. Nothing it does needs root, except the opt-in
+`--pacman-hook` below.
 
 ### After you run it
 
@@ -152,12 +153,34 @@ so it still checks the right one after a Refresh.
 ### Options
 
 ```sh
-./install.sh --link       # symlink instead of copy: edits here go live
-./install.sh --uninstall  # remove it and drop it from enabled-extensions
+./install.sh --link         # symlink instead of copy: edits here go live
+./install.sh --uninstall    # remove it, drop it from enabled-extensions, remove the hook
+./install.sh --pacman-hook  # Arch and derivatives: warn when gnome-shell outgrows it
 ```
 
 `--link` means editing this repo updates the installed extension, at the cost of
 breaking it if the repo moves.
+
+`--pacman-hook` exists because of how this extension breaks in practice. Each GNOME
+major release (every March and September) makes the shell refuse it at the next login
+until `metadata.json` names the new version. That happens with no error and no
+notification; the toolbar just goes back to showing the window behind Firefox. The hook
+runs after pacman installs or upgrades `gnome-shell` and prints a warning if the new
+major isn't declared:
+
+```
+WARNING: Firefox Wallpaper Underlay does not declare GNOME Shell 52.
+It is still running now, but will NOT load after your next login, ...
+```
+
+The running shell keeps the old extension loaded until you log out, so the warning comes
+while there is still time to update before it breaks. It installs
+`/etc/pacman.d/hooks/firefox-wallpaper-underlay.hook` and
+`/usr/local/lib/firefox-wallpaper-underlay/check-shell-version` (with `sudo`). Both are
+copies, so moving the repo doesn't break them. Run the second one directly to check by
+hand. Because it runs as root, it looks for the extension under every user's
+`~/.local/share/gnome-shell/extensions/` and can't see a custom `XDG_DATA_HOME`.
+`--uninstall` removes both files.
 
 ### Doing it by hand
 
