@@ -277,6 +277,9 @@ right edge that then stops being the window's.
 **What you're trading.** It's a picture, not a window into the desktop, so it's only
 aligned while Firefox is **maximized** — move or unmaximize it and the image stays put
 while the window doesn't. It won't follow a wallpaper change either; re-run the script.
+Nor a **display-scale change**: the logical screen size is written into both sheets as
+fixed pixels, so changing the scale leaves the copy the wrong size until you re-run the
+script — see [Troubleshooting](#troubleshooting).
 You can have "always shows the wallpaper" or "always correct as the window moves", not
 both.
 
@@ -363,6 +366,61 @@ extension loads, works perfectly, and is completely invisible under the styleshe
 opaque copy — which reads exactly like an extension that never loaded.
 
 ## Troubleshooting
+
+**After changing the display scale, the wallpaper is smaller (or bigger) than the
+screen.** This only happens in wallpaper mode. `embed-wallpaper.py` writes the screen size in
+**logical** pixels (physical ÷ scale) into the sheets as literal numbers:
+`--wallpaper-screen-w/h` and the sidebar rule in `userChrome.css`, and `background-size`
+in `userContent.css`. Change the scale and Firefox's logical screen changes, but those
+numbers don't. The copy is anchored bottom-right, so an image that is now too small
+covers only that corner, with bare window around it. A wallpaper that looks *smaller*
+means the scale went down since you embedded it. A cropped, zoomed-in wallpaper means it
+went up. For example, a 1920x1080 laptop embedded at 125% gets 1536x864, and back at 100%
+Firefox lays out 1920x1080.
+
+You have two fixes. One keeps wallpaper mode; the other switches to the extension.
+
+*Keep wallpaper mode: re-embed at the new scale.*
+
+1. **Log out and back in** if you haven't since changing the scale. The script reads the
+   scale from `~/.config/monitors.xml`, so this makes sure it sees the new value.
+2. **Re-run the script and read what it prints:**
+
+   ```sh
+   python3 embed-wallpaper.py
+   ```
+
+   It should say e.g. `Display 1920x1080 at 1.25x scale -> 1536x864 logical pixels`, and
+   nothing at all at 100%. If the scale it names is not the one in Settings → Displays,
+   pass it yourself: `--scale=1.25`, or `--screen=1536x864` to give the result outright.
+3. **Copy both sheets in.** The script writes next to itself, not into your profile:
+
+   ```sh
+   cp userChrome.css userContent.css /path/to/profile/chrome/
+   ```
+
+4. **Fully quit Firefox and start it again.** Chrome CSS is read only at startup.
+
+You will have to repeat this every time you change the scale.
+
+*Switch to the extension: almost nothing depends on the scale.* The extension shows
+GNOME's own background actor and sizes it from the monitor, not from a number in the
+sheet, so the toolbar and page area stay right at any scale. It also tracks the window
+when you move or unmaximize it. Follow
+[Wallpaper mode → the extension](#wallpaper-mode--the-extension) from step 1. Two things
+matter coming from this problem:
+
+- **Step 2 still re-embeds, and it has to be at the new scale.** The hovered sidebar
+  carries a copy in both modes, and its size is written into the sheet like everything
+  else. Do the logout from step 1 above first and check the line the script prints. If
+  you skip this, the sidebar copy keeps the old size even though the rest of the window
+  is right.
+- **Step 4 turns `userchrome.wallpaper.on` off in `user.js`.** Leave it on and the
+  stylesheet's copy, still at the wrong size, is painted over the extension's correct
+  underlay. Then nothing looks fixed.
+
+After that, a later scale change affects only the hovered sidebar. Re-run the script
+and copy the sheets in again to fix it.
 
 **Nothing changed at all.** Rule out the filename first — `user.js.txt` and
 `userChrome.css.txt` are what a graphical editor writes if you let it, and a file manager
